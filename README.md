@@ -1,4 +1,8 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+CoFlow
+
+Real-time colaborative system design workspace
+
+This is a [Next.js](https://nextjs.org) project 
 
 ## Getting Started
 
