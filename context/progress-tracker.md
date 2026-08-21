@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- None yet
+- Design system and UI primitives (`context/feature-specs/01-design-system.md`)
 
 ## Current Goal
 
-- Define the immediate implementation goal here.
+- Install and configure shadcn/ui, add the required primitive components, and align the theme with the dark-only design language in `context/ui-context.md`.
 
 ## Completed
 
@@ -16,7 +16,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## In Progress
 
-- None yet.
+- `01-design-system`: install shadcn/ui, add Button/Card/Dialog/Input/Tabs/Textarea/ScrollArea, install lucide-react, add `lib/utils.ts` `cn()` helper, wire dark theme tokens into `globals.css`.
 
 ## Next Up
 
