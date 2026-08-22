@@ -60,12 +60,18 @@ export function CreateProjectDialog({
               onChange={(event) => onNameChange(event.target.value)}
               placeholder="My project"
             />
-            <p className="text-xs text-copy-muted">
-              {slug ? `/${slug}` : "Enter a name to preview the URL"}
-            </p>
+            {name.trim() && !slug ? (
+              <p className="text-xs text-destructive">
+                Name must include at least one letter or number.
+              </p>
+            ) : (
+              <p className="text-xs text-copy-muted">
+                {slug ? `/${slug}` : "Enter a name to preview the URL"}
+              </p>
+            )}
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={!name.trim() || isLoading}>
+            <Button type="submit" disabled={!slug || isLoading}>
               {isLoading ? "Creating..." : "Create project"}
             </Button>
           </DialogFooter>

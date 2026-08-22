@@ -15,6 +15,7 @@ interface RenameProjectDialogProps {
   open: boolean
   currentName: string
   name: string
+  slug: string
   isLoading: boolean
   onOpenChange: (open: boolean) => void
   onNameChange: (name: string) => void
@@ -25,6 +26,7 @@ export function RenameProjectDialog({
   open,
   currentName,
   name,
+  slug,
   isLoading,
   onOpenChange,
   onNameChange,
@@ -55,8 +57,13 @@ export function RenameProjectDialog({
             value={name}
             onChange={(event) => onNameChange(event.target.value)}
           />
+          {name.trim() && !slug ? (
+            <p className="text-xs text-destructive">
+              Name must include at least one letter or number.
+            </p>
+          ) : null}
           <DialogFooter>
-            <Button type="submit" disabled={!name.trim() || isLoading}>
+            <Button type="submit" disabled={!slug || isLoading}>
               {isLoading ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>

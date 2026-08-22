@@ -52,7 +52,8 @@ export function useProjectDialogs() {
 
   async function submitCreate() {
     const trimmed = name.trim()
-    if (!trimmed) return
+    const newSlug = slugify(trimmed)
+    if (!trimmed || !newSlug) return
 
     setIsLoading(true)
     await wait(MOCK_DELAY_MS)
@@ -61,7 +62,7 @@ export function useProjectDialogs() {
       {
         id: crypto.randomUUID(),
         name: trimmed,
-        slug: slugify(trimmed),
+        slug: newSlug,
         isOwner: true,
       },
     ])
@@ -71,7 +72,8 @@ export function useProjectDialogs() {
   async function submitRename() {
     if (dialog?.type !== "rename") return
     const trimmed = name.trim()
-    if (!trimmed) return
+    const newSlug = slugify(trimmed)
+    if (!trimmed || !newSlug) return
 
     const projectId = dialog.project.id
     setIsLoading(true)
@@ -79,7 +81,7 @@ export function useProjectDialogs() {
     setProjects((prev) =>
       prev.map((project) =>
         project.id === projectId
-          ? { ...project, name: trimmed, slug: slugify(trimmed) }
+          ? { ...project, name: trimmed, slug: newSlug }
           : project
       )
     )

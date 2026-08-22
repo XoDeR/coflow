@@ -61,6 +61,7 @@ export default function EditorPage() {
         open={dialog?.type === "rename"}
         currentName={dialog?.type === "rename" ? dialog.project.name : ""}
         name={name}
+        slug={slug}
         isLoading={isLoading}
         onOpenChange={handleOpenChange}
         onNameChange={setName}
