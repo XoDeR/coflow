@@ -50,7 +50,6 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 
   /* App-level design tokens — see context/ui-context.md */
-  --color-base: var(--bg-base);
   --color-surface: var(--bg-surface);
   --color-elevated: var(--bg-elevated);
   --color-subtle: var(--bg-subtle);
@@ -137,12 +136,13 @@
 }
 
 /*
- * `--color-base` (for `bg-base`) shares its name with Tailwind's built-in
- * `text-base` font-size scale key, so Tailwind compiles `text-base` as a
- * color utility (`color: var(--bg-base)`) instead of `font-size: 1rem`.
- * This rule is intentionally outside any @layer so it always wins over
- * Tailwind's generated (layered) utility and restores the real font size.
+ * A `--color-base` theme token would share its name with Tailwind's
+ * built-in `text-base` font-size scale key, making `text-base` compile as
+ * `color: var(--bg-base)` instead of `font-size: 1rem` (breaking every
+ * heading that uses it, e.g. DialogTitle, CardTitle). `bg-base` is defined
+ * as its own static utility instead, so it never registers a `base` color
+ * token and `text-base` keeps Tailwind's real font-size meaning.
  */
-.text-base {
-  font-size: 1rem;
+@utility bg-base {
+  background-color: var(--bg-base);
 }
