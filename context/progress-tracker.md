@@ -27,6 +27,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - `03-auth`: Added `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in` and `NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up` to `.env.local` and `.example.env.local` — these are Clerk's own conventional env var names (not invented), and `proxy.ts` reads them to build the public-route matcher instead of hardcoding the paths twice.
 - `03-auth`: Verified `tsc --noEmit`, `eslint`, and `next build` all pass. `next build` output confirms `proxy.ts` is picked up (`ƒ Proxy (Middleware)`) and both auth routes compile. Manually verified via `npm run dev`: `GET /` returns `307` (redirect to `/sign-in`) when signed out, `GET /sign-in` returns `200` and its HTML contains the "Coflow" wordmark, the tagline text, and Clerk's rendered form markup.
 - `03-auth` (revision): Reworked `components/auth/auth-layout.tsx` to an even 50/50 split (`flex-1` both sides) after user feedback referencing a competitor screenshot. Left panel now gets `bg-surface` with a flat `bg-accent-dim` wash layered on top (absolutely-positioned overlay, content in a `relative` layer above it) so it reads as a distinct panel against the `bg-base` right side — both are existing tokens, no hardcoded hex, no gradient (gradients stay disallowed per the original spec). Added a solid `bg-brand` square as a compact logo mark, a large `text-4xl` heading, a one-line subhead, and a 3-item feature list (`Sparkles`/`Users`/`FileText` from `lucide-react`, each in a small `bg-subtle` icon square — not a bordered/elevated card, so this still respects "no feature cards"). Headline/body font stays Geist Sans throughout (`font-sans` inherited from `<html>`) rather than the serif display font shown in the reference screenshot, since `ui-context.md` only defines Geist Sans/Geist Mono. Re-verified `tsc --noEmit`, `eslint`, `next build`, and rendered HTML content via `curl` after this change.
+- `02-editor`: `app/editor/page.tsx` — client component wiring the existing `EditorNavbar` and `ProjectSidebar` with real `isSidebarOpen` state (`useState`, default closed). Full-viewport column (`h-svh flex flex-col`): navbar on top, then a `relative flex-1 overflow-hidden` row containing the floating `ProjectSidebar` overlay and a centered `main` placeholder ("Canvas coming soon") standing in for the future React Flow canvas. No AI sidebar yet — that component doesn't exist in the codebase yet, so it's left out of scope rather than stubbed. Verified `tsc --noEmit`, `eslint`, and `next build` all pass; build output confirms `/editor` compiles as a static route, resolving the post-sign-in redirect 404.
 
 ## In Progress
 
@@ -34,7 +35,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Next Up
 
-- Build the `/editor` route itself (layout + real `isSidebarOpen` state wiring `EditorNavbar` + `ProjectSidebar`) — referenced as the post-sign-in redirect target in `03-auth` but out of that spec's scope; until this exists, an authenticated visit to `/` will redirect to a 404.
+- Build the right-hand slide-over AI sidebar referenced in `ui-context.md`'s layout patterns (no component exists yet).
 - Build real dialogs on top of the verified `components/ui/dialog.tsx` pattern when a feature needs one.
 
 ## Open Questions
