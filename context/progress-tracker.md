@@ -4,7 +4,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Auth (`context/feature-specs/03-auth.md`) — complete
+- Project dialogs (`context/feature-specs/04-project-dialogs.md`) — complete
 
 ## Current Goal
 
@@ -28,6 +28,12 @@ Update this file whenever the current phase, active feature, or implementation s
 - `03-auth`: Verified `tsc --noEmit`, `eslint`, and `next build` all pass. `next build` output confirms `proxy.ts` is picked up (`ƒ Proxy (Middleware)`) and both auth routes compile. Manually verified via `npm run dev`: `GET /` returns `307` (redirect to `/sign-in`) when signed out, `GET /sign-in` returns `200` and its HTML contains the "Coflow" wordmark, the tagline text, and Clerk's rendered form markup.
 - `03-auth` (revision): Reworked `components/auth/auth-layout.tsx` to an even 50/50 split (`flex-1` both sides) after user feedback referencing a competitor screenshot. Left panel now gets `bg-surface` with a flat `bg-accent-dim` wash layered on top (absolutely-positioned overlay, content in a `relative` layer above it) so it reads as a distinct panel against the `bg-base` right side — both are existing tokens, no hardcoded hex, no gradient (gradients stay disallowed per the original spec). Added a solid `bg-brand` square as a compact logo mark, a large `text-4xl` heading, a one-line subhead, and a 3-item feature list (`Sparkles`/`Users`/`FileText` from `lucide-react`, each in a small `bg-subtle` icon square — not a bordered/elevated card, so this still respects "no feature cards"). Headline/body font stays Geist Sans throughout (`font-sans` inherited from `<html>`) rather than the serif display font shown in the reference screenshot, since `ui-context.md` only defines Geist Sans/Geist Mono. Re-verified `tsc --noEmit`, `eslint`, `next build`, and rendered HTML content via `curl` after this change.
 - `02-editor`: `app/editor/page.tsx` — client component wiring the existing `EditorNavbar` and `ProjectSidebar` with real `isSidebarOpen` state (`useState`, default closed). Full-viewport column (`h-svh flex flex-col`): navbar on top, then a `relative flex-1 overflow-hidden` row containing the floating `ProjectSidebar` overlay and a centered `main` placeholder ("Canvas coming soon") standing in for the future React Flow canvas. No AI sidebar yet — that component doesn't exist in the codebase yet, so it's left out of scope rather than stubbed. Verified `tsc --noEmit`, `eslint`, and `next build` all pass; build output confirms `/editor` compiles as a static route, resolving the post-sign-in redirect 404.
+- `04-project-dialogs`: `types/project.ts` (`Project` interface: `id`, `name`, `slug`, `isOwner`) and `lib/mock-projects.ts` (3 mock projects, 2 owned / 1 shared) — the mock data source; no API/db involved per spec. `lib/utils.ts` gained `slugify()` (lowercase, non-alphanumeric runs → single hyphen, trimmed).
+- `04-project-dialogs`: `hooks/use-project-dialogs.ts` — the dedicated hook required by the spec. Owns the mock `projects` array (in-memory only — create/rename/delete mutate local state, nothing persists across reload, matching "no API calls or persistence"), a single `dialog` discriminated-union state (`{type:"create"}` / `{type:"rename", project}` / `{type:"delete", project}` / `null` — only one dialog open at a time by construction), the shared `name` form field, a derived `slug` (`useMemo(slugify(name))`) for the live preview, and `isLoading` toggled around a `MOCK_DELAY_MS` (400ms) `setTimeout` in each submit handler to simulate async without a real request.
+- `04-project-dialogs`: `components/editor/create-project-dialog.tsx`, `rename-project-dialog.tsx`, `delete-project-dialog.tsx` — built on the untouched `components/ui/dialog.tsx` primitives (not modified, per the protected-foundation rule). Create: name input + live `/{slug}` preview text under it. Rename: prefilled/auto-focused input, current name in the description, submitting via `<form onSubmit>` so Enter submits. Delete: no input, `variant="destructive"` confirm button, explicit Cancel.
+- `04-project-dialogs`: `components/editor/editor-home.tsx` — the `/editor` center content (heading, description, `New Project` button with a `Plus` icon), not wrapped in a card, per spec. `components/editor/project-sidebar.tsx` rewritten to accept `projects`/`onCreateProject`/`onRenameProject`/`onDeleteProject`; renders My Projects (`isOwner: true`) and Shared (`isOwner: false`) lists from the same array — rename/delete icon buttons (`Pencil`/`Trash2`, `opacity-0 group-hover:opacity-100`) only render on the owned-projects list, never on Shared. Added a `md:hidden` backdrop scrim (`fixed inset-0 bg-black/50`, click-to-close) so mobile taps outside the sidebar close it; desktop is unaffected (no backdrop rendered above `md`).
+- `04-project-dialogs`: `app/editor/page.tsx` now calls `useProjectDialogs()` once and wires it in both directions — `EditorHome`'s `New Project` and `ProjectSidebar`'s `New Project` both call the same `openCreateDialog`, sidebar rename/delete icons call `openRenameDialog`/`openDeleteDialog`, and the three dialog components render at the page level keyed off `dialog?.type`.
+- `04-project-dialogs`: Verified `tsc --noEmit`, `eslint`, and `next build` all pass with no errors. Manual click-through of `/editor` wasn't possible — Clerk's `proxy.ts` redirects unauthenticated requests to `/sign-in` before the page renders (confirmed via `curl`, same behavior as before this change) — so correctness rests on the type check + build + code review rather than a live click-through.
 
 ## In Progress
 
@@ -36,7 +42,7 @@ Update this file whenever the current phase, active feature, or implementation s
 ## Next Up
 
 - Build the right-hand slide-over AI sidebar referenced in `ui-context.md`'s layout patterns (no component exists yet).
-- Build real dialogs on top of the verified `components/ui/dialog.tsx` pattern when a feature needs one.
+- Wire real project creation/rename/delete to the database (Prisma) and remove `lib/mock-projects.ts` once an API layer exists — `04-project-dialogs` was explicitly mock-data-only.
 
 ## Open Questions
 
