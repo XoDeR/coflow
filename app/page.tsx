@@ -1,10 +1,7 @@
-import { Button } from "@/components/ui/button";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
-export default function Home() {
-  return (
-    <div className="flex flex-1 items-center justify-center">
-      <span>CoFlow</span>
-      
-    </div>
-  );
+export default async function Home() {
+  const { userId } = await auth();
+  redirect(userId ? "/editor" : "/sign-in");
 }
