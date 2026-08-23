@@ -14,8 +14,9 @@ import { Input } from "@/components/ui/input"
 interface CreateProjectDialogProps {
   open: boolean
   name: string
-  slug: string
+  roomId: string
   isLoading: boolean
+  error: string | null
   onOpenChange: (open: boolean) => void
   onNameChange: (name: string) => void
   onSubmit: () => void
@@ -24,8 +25,9 @@ interface CreateProjectDialogProps {
 export function CreateProjectDialog({
   open,
   name,
-  slug,
+  roomId,
   isLoading,
+  error,
   onOpenChange,
   onNameChange,
   onSubmit,
@@ -60,18 +62,19 @@ export function CreateProjectDialog({
               onChange={(event) => onNameChange(event.target.value)}
               placeholder="My project"
             />
-            {name.trim() && !slug ? (
+            {name.trim() && !roomId ? (
               <p className="text-xs text-destructive">
                 Name must include at least one letter or number.
               </p>
             ) : (
               <p className="text-xs text-copy-muted">
-                {slug ? `/${slug}` : "Enter a name to preview the URL"}
+                {roomId ? `/${roomId}` : "Enter a name to preview the room ID"}
               </p>
             )}
           </div>
+          {error ? <p className="text-xs text-destructive">{error}</p> : null}
           <DialogFooter>
-            <Button type="submit" disabled={!slug || isLoading}>
+            <Button type="submit" disabled={!roomId || isLoading}>
               {isLoading ? "Creating..." : "Create project"}
             </Button>
           </DialogFooter>

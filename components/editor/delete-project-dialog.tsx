@@ -14,6 +14,7 @@ interface DeleteProjectDialogProps {
   open: boolean
   projectName: string
   isLoading: boolean
+  error: string | null
   onOpenChange: (open: boolean) => void
   onConfirm: () => void
 }
@@ -22,6 +23,7 @@ export function DeleteProjectDialog({
   open,
   projectName,
   isLoading,
+  error,
   onOpenChange,
   onConfirm,
 }: DeleteProjectDialogProps) {
@@ -35,6 +37,7 @@ export function DeleteProjectDialog({
             action cannot be undone.
           </DialogDescription>
         </DialogHeader>
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
         <DialogFooter>
           <Button
             variant="outline"

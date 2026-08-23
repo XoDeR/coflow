@@ -12,3 +12,7 @@ export function slugify(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
 }
+
+export function generateShortSuffix(length = 5): string {
+  return Math.random().toString(36).slice(2, 2 + length)
+}
