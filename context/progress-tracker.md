@@ -4,7 +4,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Project dialogs (`context/feature-specs/04-project-dialogs.md`) — complete
+- Prisma data models (`context/feature-specs/05-prisma.md`) — complete
 
 ## Current Goal
 
@@ -34,6 +34,11 @@ Update this file whenever the current phase, active feature, or implementation s
 - `04-project-dialogs`: `components/editor/editor-home.tsx` — the `/editor` center content (heading, description, `New Project` button with a `Plus` icon), not wrapped in a card, per spec. `components/editor/project-sidebar.tsx` rewritten to accept `projects`/`onCreateProject`/`onRenameProject`/`onDeleteProject`; renders My Projects (`isOwner: true`) and Shared (`isOwner: false`) lists from the same array — rename/delete icon buttons (`Pencil`/`Trash2`, `opacity-0 group-hover:opacity-100`) only render on the owned-projects list, never on Shared. Added a `md:hidden` backdrop scrim (`fixed inset-0 bg-black/50`, click-to-close) so mobile taps outside the sidebar close it; desktop is unaffected (no backdrop rendered above `md`).
 - `04-project-dialogs`: `app/editor/page.tsx` now calls `useProjectDialogs()` once and wires it in both directions — `EditorHome`'s `New Project` and `ProjectSidebar`'s `New Project` both call the same `openCreateDialog`, sidebar rename/delete icons call `openRenameDialog`/`openDeleteDialog`, and the three dialog components render at the page level keyed off `dialog?.type`.
 - `04-project-dialogs`: Verified `tsc --noEmit`, `eslint`, and `next build` all pass with no errors. Manual click-through of `/editor` wasn't possible — Clerk's `proxy.ts` redirects unauthenticated requests to `/sign-in` before the page renders (confirmed via `curl`, same behavior as before this change) — so correctness rests on the type check + build + code review rather than a live click-through.
+- `05-prisma`: `prisma/models/project.prisma` — multi-file schema (schema root is `prisma/` per `prisma.config.ts`, no preview flag needed on Prisma 7). `Project` (`id` cuid, `ownerId`, `name`, optional `description`, `status ProjectStatus @default(DRAFT)` enum `DRAFT`/`ARCHIVED`, optional `canvasJsonPath`, `createdAt`/`updatedAt`, `@@index([ownerId])`, `@@index([createdAt])`) and `ProjectCollaborator` (`id` cuid, `projectId` + `project` relation with `onDelete: Cascade`, `email`, `createdAt`, `@@unique([projectId, email])`, `@@index([email])`, `@@index([projectId, createdAt])`).
+- `05-prisma`: `lib/prisma.ts` — cached singleton on `globalThis.prismaGlobal` (dev-only, per Prisma 7's own recommended pattern). Branches purely on `DATABASE_URL`'s prefix: `prisma+postgres://` constructs `new PrismaClient({ accelerateUrl: databaseUrl })` (Prisma 7's `PrismaClient` options are a discriminated union — `accelerateUrl` and `adapter` are mutually exclusive at the type level, confirmed in `node_modules/@prisma/client/runtime/client.d.ts`), anything else builds `new PrismaPg({ connectionString: databaseUrl })` and passes it as `adapter`. No `@prisma/extension-accelerate` needed — Accelerate support is native to the installed `@prisma/client@7`.
+- `05-prisma` (infra fix, not in spec but required for "migration runs successfully"): `prisma.config.ts` previously only did `import "dotenv/config"`, which loads `.env` — but the real `DATABASE_URL` lives in `.env.local` (Next.js convention), so the Prisma CLI saw an empty value and `prisma migrate dev` failed with "datasource.url property is required". Changed to explicit `dotenv` `config({ path: ".env" })` then `config({ path: ".env.local" })` calls so both are loaded, `.env.local` taking precedence.
+- `05-prisma`: Ran `npx prisma migrate dev --name add_project_models` against the real `DATABASE_URL` in `.env.local` (a hosted Prisma Postgres instance) — applied cleanly, `prisma/migrations/20260823140533_add_project_models/migration.sql` creates `ProjectStatus` enum, `Project`, `ProjectCollaborator`, all indexes, the unique constraint, and the cascade FK. Ran `npx prisma generate` after — output goes to `app/generated/prisma/` (already gitignored, generator was pre-configured with `provider = "prisma-client"`, `output = "../app/generated/prisma"`).
+- `05-prisma`: Verified `npx prisma validate`, `tsc --noEmit`, `eslint`, and `next build` all pass with no errors.
 
 ## In Progress
 
@@ -42,7 +47,7 @@ Update this file whenever the current phase, active feature, or implementation s
 ## Next Up
 
 - Build the right-hand slide-over AI sidebar referenced in `ui-context.md`'s layout patterns (no component exists yet).
-- Wire real project creation/rename/delete to the database (Prisma) and remove `lib/mock-projects.ts` once an API layer exists — `04-project-dialogs` was explicitly mock-data-only.
+- Wire real project creation/rename/delete to the database (`lib/prisma.ts` + the new `Project`/`ProjectCollaborator` models) via `app/api` route handlers, and remove `lib/mock-projects.ts` once that API layer exists — `04-project-dialogs` was explicitly mock-data-only, and `05-prisma` only added the schema/client/migration, not the routes.
 
 ## Open Questions
 
@@ -51,6 +56,7 @@ Update this file whenever the current phase, active feature, or implementation s
 ## Architecture Decisions
 
 - `03-auth`: Treated "use the existing sign-in and sign-up env vars" as "use Clerk's standard env var names" (`NEXT_PUBLIC_CLERK_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_SIGN_UP_URL`) rather than a blocker, since those two vars didn't previously exist in `.env.local` but are Clerk's own convention, not app-invented names — consistent with the adjacent "do not rename or invent new ones" instruction.
+- `05-prisma`: Fixed `prisma.config.ts`'s env loading (see completed-work entry above) rather than moving `DATABASE_URL` into `.env` — `.env.local` is the project's established convention for real secrets (Clerk's keys already live there), so the CLI's env loading was the bug, not the file placement.
 
 ## Session Notes
 
