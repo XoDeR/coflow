@@ -4,7 +4,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Prisma data models (`context/feature-specs/05-prisma.md`) — complete
+- Project API routes (`context/feature-specs/06-project-apis.md`) — complete
 
 ## Current Goal
 
@@ -39,6 +39,10 @@ Update this file whenever the current phase, active feature, or implementation s
 - `05-prisma` (infra fix, not in spec but required for "migration runs successfully"): `prisma.config.ts` previously only did `import "dotenv/config"`, which loads `.env` — but the real `DATABASE_URL` lives in `.env.local` (Next.js convention), so the Prisma CLI saw an empty value and `prisma migrate dev` failed with "datasource.url property is required". Changed to explicit `dotenv` `config({ path: ".env" })` then `config({ path: ".env.local" })` calls so both are loaded, `.env.local` taking precedence.
 - `05-prisma`: Ran `npx prisma migrate dev --name add_project_models` against the real `DATABASE_URL` in `.env.local` (a hosted Prisma Postgres instance) — applied cleanly, `prisma/migrations/20260823140533_add_project_models/migration.sql` creates `ProjectStatus` enum, `Project`, `ProjectCollaborator`, all indexes, the unique constraint, and the cascade FK. Ran `npx prisma generate` after — output goes to `app/generated/prisma/` (already gitignored, generator was pre-configured with `provider = "prisma-client"`, `output = "../app/generated/prisma"`).
 - `05-prisma`: Verified `npx prisma validate`, `tsc --noEmit`, `eslint`, and `next build` all pass with no errors.
+- `06-project-apis`: `app/api/projects/route.ts` — `GET` lists the authenticated user's own projects (`where: { ownerId: userId }`, `orderBy: createdAt desc`); `POST` creates a project owned by the authenticated user, defaulting `name` to `"Untitled Project"` when missing/blank, relying on the schema's default `cuid()` for `id` (no sequential ID logic added).
+- `06-project-apis`: `app/api/projects/[projectId]/route.ts` — `PATCH` renames (requires a non-empty `name` in the body, `400` otherwise), `DELETE` removes. Both look up the project first: missing project → `404`, project exists but `ownerId !== userId` → `403`. `404` isn't in the spec's explicit response list but is a direct consequence of the owner check (no project means no owner to compare against), not an invented product behavior.
+- `06-project-apis`: Both routes return `401` before any lookup when `auth()` yields no `userId`. Response shape is consistent: `{ project }` / `{ projects }` on success, `{ error }` on failure. Listing is owner-only (`ownerId` match) — the spec says "list current user's projects" and only defines `ownerId`-based rules, so `ProjectCollaborator` (shared-with-me) records are intentionally not included yet; that model has no read path wired up anywhere in the app so far.
+- `06-project-apis`: Verified `tsc --noEmit`, `eslint`, and `next build` all pass with no errors. `next build` output confirms both `/api/projects` and `/api/projects/[projectId]` compile as dynamic routes. `lib/mock-projects.ts` and the UI dialogs still use mock data — this unit was explicitly backend-only per spec ("Keep this backend-only. Do not wire the UI yet."), so wiring `hooks/use-project-dialogs.ts` to these routes is left for a future unit.
 
 ## In Progress
 
@@ -47,7 +51,7 @@ Update this file whenever the current phase, active feature, or implementation s
 ## Next Up
 
 - Build the right-hand slide-over AI sidebar referenced in `ui-context.md`'s layout patterns (no component exists yet).
-- Wire real project creation/rename/delete to the database (`lib/prisma.ts` + the new `Project`/`ProjectCollaborator` models) via `app/api` route handlers, and remove `lib/mock-projects.ts` once that API layer exists — `04-project-dialogs` was explicitly mock-data-only, and `05-prisma` only added the schema/client/migration, not the routes.
+- Wire `hooks/use-project-dialogs.ts` and `app/editor/page.tsx` to the new `/api/projects` routes (real fetch calls with loading/error handling) and remove `lib/mock-projects.ts` once the UI no longer depends on it.
 
 ## Open Questions
 
