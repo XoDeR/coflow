@@ -4,7 +4,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Share dialog with Clerk-enriched collaborator management (`context/feature-specs/09-share-dialog.md`) — complete
+- Liveblocks realtime infrastructure setup (`context/feature-specs/10-liveblocks-setup.md`) — complete
 
 ## Current Goal
 
@@ -75,6 +75,12 @@ Update this file whenever the current phase, active feature, or implementation s
 - `09-share-dialog`: No local user table was added — collaborator identity enrichment happens live against the Clerk Backend API on each list request, per spec ("Do not add a local user table").
 - `09-share-dialog`: Verified `tsc --noEmit`, `eslint` on all new/changed files, and `npm run build` all pass with no errors (build output confirms both new `/api/projects/[projectId]/collaborators` routes compile). Verified via `npm run dev` + `curl` that all three collaborator endpoints redirect (`307` to `/sign-in`) when unauthenticated, consistent with how the proxy already protects `/api/projects`. Full authenticated click-through (invite/remove/copy round-trip, Clerk enrichment rendering) wasn't done — same Clerk-gated limitation noted in every prior unit since `04-project-dialogs`.
 
+- `10-liveblocks-setup`: `liveblocks.config.ts` (pre-existing scaffold at project root, previously empty placeholders) — `Presence` gained `cursor: { x: number; y: number } | null` and `isThinking: boolean`; `UserMeta.info` gained `name`, `avatar`, `color`. The remaining scaffold types (`Storage`, `RoomEvent`, `ThreadMetadata`, `RoomInfo`) are out of this spec's scope and left as empty placeholders, but changed from `{}` to `Record<string, never>` — editing this file put them under `eslint`'s `@typescript-eslint/no-empty-object-type` rule, which `{}` fails.
+- `10-liveblocks-setup`: `lib/liveblocks.ts` (new) — `getLiveblocksClient()`, a lazily-constructed, cached (`globalThis`-memoized) `@liveblocks/node` `Liveblocks` client, mirroring `lib/prisma.ts`'s singleton pattern with one deviation: construction is deferred to first call rather than module scope, because the `Liveblocks` constructor synchronously validates `LIVEBLOCKS_SECRET_KEY`'s format and there's no real Liveblocks project key yet (unlike `DATABASE_URL`, which was already provisioned in `05-prisma`) — an eager top-level `new Liveblocks(...)` broke `next build`'s route page-data collection for `/api/liveblocks-auth`. Also exports `getUserColor(userId)`, a deterministic string-hash → fixed-palette mapping; the palette reuses the 8 vivid node-text colors from `context/ui-context.md` (`NODE_COLORS`) rather than inventing new hardcoded colors, so cursor colors stay visually consistent with the rest of the design system.
+- `10-liveblocks-setup`: `app/api/liveblocks-auth/route.ts` (new) — `POST` handler. Requires Clerk auth via `getCurrentIdentity()` (`lib/project-access.ts`, `08-editor-workspace-shell`) → `401` if signed out. Reads `room` from the JSON body (the project ID, per spec's "use the project ID as the Liveblocks room ID") → `400` if missing. Verifies access via the existing `getProjectAccess()` helper → `403` if the user is neither owner nor collaborator. Ensures the room exists via `getOrCreateRoom(roomId, { defaultAccesses: ["room:write"] })` — create-only-if-needed is `getOrCreateRoom`'s built-in semantics, so an existing room's permissions are left untouched on subsequent calls. `defaultAccesses: ["room:write"]` (rather than per-user `usersAccesses`) was chosen because the real access boundary is the `getProjectAccess()` check just above — token issuance is already gated, so the room itself doesn't need to track collaborators separately, and per-user Liveblocks permissions would need re-syncing every time `ProjectCollaborator` rows change. Calls `liveblocks.identifyUser({ userId, groupIds: [] }, { userInfo: { name, avatar, color } })` — `groupIds: []` is required by this installed version's `Identity` type even though groups aren't used; `name` falls back from Clerk `firstName`+`lastName` to the user's email to `"Anonymous"`; `avatar` is Clerk's `imageUrl`; `color` is `getUserColor(userId)`.
+- `10-liveblocks-setup`: Added `@liveblocks/node` to `package.json` (the other `@liveblocks/*` packages and `liveblocks.config.ts` already existed from a prior setup step outside the tracked units, but the server SDK needed for auth was missing). Added `LIVEBLOCKS_SECRET_KEY` to `.env.local` (empty placeholder in `.example.env.local`) — user supplied a real key (`sk_dev_...`) after initial implementation, confirmed via a re-run of `next build`.
+- `10-liveblocks-setup`: Verified `tsc --noEmit`, `eslint` on all new/changed files, and `next build` all pass with no errors, both before and after the real `LIVEBLOCKS_SECRET_KEY` was added (`next build` output confirms `/api/liveblocks-auth` compiles as a dynamic route in both runs). Verified via `npm run dev` + `curl` that the route redirects (`307` to `/sign-in`) when unauthenticated, consistent with how `proxy.ts` already protects `/api/projects` and the collaborators routes. Full authenticated round-trip (valid session token returned, room actually created) still wasn't verified — same Clerk-gated `curl` limitation noted in every prior unit since `04-project-dialogs` (a real browser session is needed to exercise it end-to-end).
+
 ## In Progress
 
 - None.
@@ -82,7 +88,7 @@ Update this file whenever the current phase, active feature, or implementation s
 ## Next Up
 
 - Wire real AI chat behavior into the `AiSidebar` placeholder added in `08-editor-workspace-shell` (message list, input, model call).
-- Build the actual canvas (Liveblocks + React Flow) behind the `/editor/[roomId]` placeholder.
+- Build the actual canvas (Liveblocks + React Flow) behind the `/editor/[roomId]` placeholder, using `/api/liveblocks-auth` as the room's `authEndpoint`.
 
 ## Open Questions
 
