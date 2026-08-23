@@ -17,6 +17,7 @@ interface EditorNavbarProps {
   projectName?: string
   isAiSidebarOpen?: boolean
   onToggleAiSidebar?: () => void
+  onShare?: () => void
 }
 
 export function EditorNavbar({
@@ -25,6 +26,7 @@ export function EditorNavbar({
   projectName,
   isAiSidebarOpen,
   onToggleAiSidebar,
+  onShare,
 }: EditorNavbarProps) {
   return (
     <header className="flex h-14 shrink-0 items-center border-b border-surface-border bg-surface px-3">
@@ -52,7 +54,7 @@ export function EditorNavbar({
       <div className="flex flex-1 items-center justify-end gap-1">
         {onToggleAiSidebar ? (
           <>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={onShare}>
               <Share2 />
               Share
             </Button>

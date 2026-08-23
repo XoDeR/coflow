@@ -9,6 +9,7 @@ import { EditorHome } from "@/components/editor/editor-home"
 import { EditorNavbar } from "@/components/editor/editor-navbar"
 import { ProjectSidebar } from "@/components/editor/project-sidebar"
 import { RenameProjectDialog } from "@/components/editor/rename-project-dialog"
+import { ShareDialog } from "@/components/editor/share-dialog"
 import { useProjectActions } from "@/hooks/use-project-actions"
 import type { Project } from "@/types/project"
 
@@ -20,6 +21,7 @@ interface EditorShellProps {
 export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(false)
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const activeProject = activeProjectId
     ? projects.find((project) => project.id === activeProjectId)
     : undefined
@@ -50,6 +52,7 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
         onToggleAiSidebar={
           activeProjectId ? () => setIsAiSidebarOpen((open) => !open) : undefined
         }
+        onShare={activeProjectId ? () => setIsShareDialogOpen(true) : undefined}
       />
       <div className="relative flex flex-1 overflow-hidden">
         <ProjectSidebar
@@ -109,6 +112,13 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
         onOpenChange={handleOpenChange}
         onConfirm={confirmDelete}
       />
+      {activeProjectId ? (
+        <ShareDialog
+          open={isShareDialogOpen}
+          onOpenChange={setIsShareDialogOpen}
+          projectId={activeProjectId}
+        />
+      ) : null}
     </div>
   )
 }

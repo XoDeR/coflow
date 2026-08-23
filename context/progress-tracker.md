@@ -4,7 +4,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Editor workspace shell with server-side access checks (`context/feature-specs/08-editor-workspace-shell.md`) — complete
+- Share dialog with Clerk-enriched collaborator management (`context/feature-specs/09-share-dialog.md`) — complete
 
 ## Current Goal
 
@@ -64,15 +64,25 @@ Update this file whenever the current phase, active feature, or implementation s
 - `08-editor-workspace-shell`: `components/editor/editor-shell.tsx` now owns `isAiSidebarOpen` state alongside the existing `isSidebarOpen`, passes `activeProject?.name` / the AI-toggle callback into `EditorNavbar` (only wires `onToggleAiSidebar` when `activeProjectId` is set), passes `activeProjectId` through to `ProjectSidebar`, and renders `<AiSidebar>` only when a project is active. The center canvas placeholder (`main`) and its "Canvas coming soon." message are unchanged from `07-wire-editor-home` — this unit only builds the surrounding chrome per its explicit scope note ("no real canvas logic").
 - `08-editor-workspace-shell`: Verified `npx tsc --noEmit`, `eslint` on all new/changed files, and `npx next build` all pass with no errors. Build output confirms `/editor/[roomId]` compiles (route table shows it in place of the old `/editor/[projectId]`). Manual authenticated click-through wasn't done — same Clerk-gated `curl`/build-only verification limitation noted in prior units.
 
+- `09-share-dialog`: `lib/collaborators.ts` (new) — `enrichCollaborators(collaborators)` batch-fetches Clerk users via `clerkClient().users.getUserList({ emailAddress: [...] })` (one call per collaborator list, not per-row), matches each `ProjectCollaborator.email` against a `Map` built from every returned user's `emailAddresses` (case-insensitive), and returns `{ id, email, name, imageUrl }` — `name` is `firstName + lastName` joined and trimmed to `null` when empty, `imageUrl` is `null` when no Clerk user matches the email (falls back to email-only display per spec).
+- `09-share-dialog`: `types/collaborator.ts` — the `Collaborator` shape returned by `enrichCollaborators` and consumed by the UI.
+- `09-share-dialog`: `app/api/projects/[projectId]/collaborators/route.ts` — `GET` uses `getCurrentIdentity()` + `getProjectAccess()` (both from `lib/project-access.ts`, added in `08-editor-workspace-shell`) so owners and collaborators alike can list (matches spec: collaborators may view the list), returning `{ collaborators, isOwner }`. `POST` is owner-only (`project.ownerId !== userId` → `403`), validates the email with a regex, normalizes to lowercase, checks the `@@unique([projectId, email])` constraint via an explicit `findUnique` first (`409` if already a collaborator) rather than relying on a caught Prisma error.
+- `09-share-dialog`: `app/api/projects/[projectId]/collaborators/[collaboratorId]/route.ts` — `DELETE` is owner-only, uses `deleteMany({ where: { id, projectId } })` so a collaborator ID can't be deleted through the wrong project's URL, `404` if nothing matched.
+- `09-share-dialog`: `hooks/use-share-dialog.ts` (new) — fetches the collaborator list in a `useEffect` keyed on `[open, projectId]` (only fetches while the dialog is open); the fetch itself is wrapped in a named `async function loadCollaborators()` called from the effect (rather than a `setState` call sitting directly in the effect body) because the project's `react-hooks/set-state-in-effect` lint rule flags any synchronous `setState` at the top level of an effect, including the conventional "set loading true, then fetch" idiom — this indirection was required to pass `eslint`, not a style preference. `submitInvite`/`removeCollaborator` optimistically patch the local `collaborators` array on success instead of re-fetching. `copyLink()` writes `${location.origin}/editor/{projectId}` to the clipboard and flips `copied` true for 2s (`setTimeout`). Ephemeral UI state (`inviteEmail`, `inviteError`, `copied`) resets via a `handleOpenChange` wrapper called on dialog close, not via an effect on `open` — same reasoning as above, and consistent with how `use-project-actions.ts` resets its own dialog state on close rather than on open.
+- `09-share-dialog`: `components/editor/share-dialog.tsx` (new) — built on the untouched `components/ui/dialog.tsx` primitives. Owners see an email `Input` + `Invite` button above the list; collaborators see only the list (description text also changes: "Invite collaborators..." vs "People with access..."). Each row shows a Clerk avatar image when `imageUrl` is present, otherwise a `bg-subtle` circle with a `User` icon fallback; name is shown above the email when Clerk returned one, otherwise just the email (per spec's "fall back to showing the email only"). Remove (`X` icon button) only renders for owners. Footer `Copy link` button swaps its icon/label to `Check` / "Copied!" while `copied` is true.
+- `09-share-dialog`: `components/editor/editor-navbar.tsx` — the `Share` button added (inert) in `08-editor-workspace-shell` now takes an `onShare?: () => void` prop and calls it `onClick`.
+- `09-share-dialog`: `components/editor/editor-shell.tsx` — owns `isShareDialogOpen` state, wires `onShare` into `EditorNavbar` (only when `activeProjectId` is set, same guard as the AI-sidebar toggle), and renders `<ShareDialog>` only when a project is active — it needs a concrete `projectId` and there's no share surface on the bare `/editor` project list.
+- `09-share-dialog`: No local user table was added — collaborator identity enrichment happens live against the Clerk Backend API on each list request, per spec ("Do not add a local user table").
+- `09-share-dialog`: Verified `tsc --noEmit`, `eslint` on all new/changed files, and `npm run build` all pass with no errors (build output confirms both new `/api/projects/[projectId]/collaborators` routes compile). Verified via `npm run dev` + `curl` that all three collaborator endpoints redirect (`307` to `/sign-in`) when unauthenticated, consistent with how the proxy already protects `/api/projects`. Full authenticated click-through (invite/remove/copy round-trip, Clerk enrichment rendering) wasn't done — same Clerk-gated limitation noted in every prior unit since `04-project-dialogs`.
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Wire real AI chat behavior into the `AiSidebar` placeholder added in this unit (message list, input, model call).
+- Wire real AI chat behavior into the `AiSidebar` placeholder added in `08-editor-workspace-shell` (message list, input, model call).
 - Build the actual canvas (Liveblocks + React Flow) behind the `/editor/[roomId]` placeholder.
-- Implement real sharing behavior behind the inert Share button added in this unit (collaborator invite by email, using the existing `ProjectCollaborator` model).
 
 ## Open Questions
 
