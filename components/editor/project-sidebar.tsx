@@ -16,6 +16,7 @@ interface ProjectSidebarProps {
   isOpen: boolean
   onClose: () => void
   projects: Project[]
+  activeProjectId?: string
   onCreateProject: () => void
   onRenameProject: (project: Project) => void
   onDeleteProject: (project: Project) => void
@@ -25,6 +26,7 @@ export function ProjectSidebar({
   isOpen,
   onClose,
   projects,
+  activeProjectId,
   onCreateProject,
   onRenameProject,
   onDeleteProject,
@@ -86,9 +88,19 @@ export function ProjectSidebar({
                 {ownedProjects.map((project) => (
                   <li
                     key={project.id}
-                    className="group flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-subtle"
+                    className={cn(
+                      "group flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-subtle",
+                      project.id === activeProjectId && "bg-subtle"
+                    )}
                   >
-                    <span className="truncate text-sm text-copy-primary">
+                    <span
+                      className={cn(
+                        "truncate text-sm",
+                        project.id === activeProjectId
+                          ? "text-brand"
+                          : "text-copy-primary"
+                      )}
+                    >
                       {project.name}
                     </span>
                     <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
@@ -129,9 +141,19 @@ export function ProjectSidebar({
                 {sharedProjects.map((project) => (
                   <li
                     key={project.id}
-                    className="flex items-center rounded-lg px-2 py-1.5 hover:bg-subtle"
+                    className={cn(
+                      "flex items-center rounded-lg px-2 py-1.5 hover:bg-subtle",
+                      project.id === activeProjectId && "bg-subtle"
+                    )}
                   >
-                    <span className="truncate text-sm text-copy-primary">
+                    <span
+                      className={cn(
+                        "truncate text-sm",
+                        project.id === activeProjectId
+                          ? "text-brand"
+                          : "text-copy-primary"
+                      )}
+                    >
                       {project.name}
                     </span>
                   </li>

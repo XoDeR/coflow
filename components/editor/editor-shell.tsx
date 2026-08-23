@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 
+import { AiSidebar } from "@/components/editor/ai-sidebar"
 import { CreateProjectDialog } from "@/components/editor/create-project-dialog"
 import { DeleteProjectDialog } from "@/components/editor/delete-project-dialog"
 import { EditorHome } from "@/components/editor/editor-home"
@@ -18,6 +19,7 @@ interface EditorShellProps {
 
 export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(false)
   const activeProject = activeProjectId
     ? projects.find((project) => project.id === activeProjectId)
     : undefined
@@ -43,17 +45,23 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
       <EditorNavbar
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((open) => !open)}
+        projectName={activeProject?.name}
+        isAiSidebarOpen={isAiSidebarOpen}
+        onToggleAiSidebar={
+          activeProjectId ? () => setIsAiSidebarOpen((open) => !open) : undefined
+        }
       />
       <div className="relative flex flex-1 overflow-hidden">
         <ProjectSidebar
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
           projects={projects}
+          activeProjectId={activeProjectId}
           onCreateProject={openCreateDialog}
           onRenameProject={openRenameDialog}
           onDeleteProject={openDeleteDialog}
         />
-        <main className="flex flex-1 items-center justify-center p-6">
+        <main className="flex flex-1 items-center justify-center bg-base p-6">
           {activeProjectId ? (
             <div className="flex flex-col items-center gap-1.5 text-center">
               <h1 className="text-lg font-medium text-copy-primary">
@@ -65,6 +73,12 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
             <EditorHome onCreateProject={openCreateDialog} />
           )}
         </main>
+        {activeProjectId ? (
+          <AiSidebar
+            isOpen={isAiSidebarOpen}
+            onClose={() => setIsAiSidebarOpen(false)}
+          />
+        ) : null}
       </div>
 
       <CreateProjectDialog

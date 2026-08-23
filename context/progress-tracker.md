@@ -4,7 +4,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Wire editor home to real project API (`context/feature-specs/07-wire-editor-home.md`) — complete
+- Editor workspace shell with server-side access checks (`context/feature-specs/08-editor-workspace-shell.md`) — complete
 
 ## Current Goal
 
@@ -54,14 +54,25 @@ Update this file whenever the current phase, active feature, or implementation s
 - `07-wire-editor-home`: Dialogs gained a small `error: string | null` prop (rendered as a `text-xs text-destructive` line, same style as existing validation errors) surfaced when a fetch call fails — not in the spec's explicit text, but without it a failed create/rename/delete would silently no-op with no feedback, which fails "implement exactly as specified" in spirit (the check-items assume success paths are visibly verifiable).
 - `07-wire-editor-home`: Verified `tsc --noEmit`, `eslint` on all changed/new files, and `npm run build` all pass with no errors (`next build` output confirms `/editor` and `/editor/[projectId]` both compile as dynamic routes). Manually verified via `npm run dev` + `curl`: `GET /editor` and `GET /editor/{id}` both return `307` to `/sign-in` when unauthenticated (proxy protection unaffected by the server-component conversion). Full authenticated click-through (create/rename/delete round-trip) wasn't done — same Clerk-gated limitation noted in `04-project-dialogs`.
 
+- `08-editor-workspace-shell`: `app/editor/[projectId]/page.tsx` renamed to `app/editor/[roomId]/page.tsx` (plain filesystem move, not a route-behavior change — the dynamic segment name doesn't appear in the resulting URL, so `router.push(\`/editor/${project.id}\`)` in `hooks/use-project-actions.ts` still resolves correctly). Per the `07-wire-editor-home` "room-ID/project-ID alignment" decision, `roomId` and the Prisma project `id` are the same value — this rename just makes the room-oriented intent of the param explicit ahead of Liveblocks wiring.
+- `08-editor-workspace-shell`: `lib/project-access.ts` (new) — `getCurrentIdentity()` wraps `auth()` + `currentUser()` into `{ userId, email }` (mirrors the pattern already inlined in `lib/projects.ts`'s callers, now centralized here since this spec explicitly asks for it as a named helper). `getProjectAccess(projectId, userId, email)` fetches the project with its `collaborators` relation and returns `{ project, hasAccess }`, where `hasAccess` is `ownerId === userId OR collaborators.some(email match)` — the same owner-or-collaborator rule already established by `getSharedProjects` in `lib/projects.ts`, just evaluated for a single project instead of listing.
+- `08-editor-workspace-shell`: `components/editor/access-denied.tsx` (new) — centered lock icon (`lucide-react` `Lock`, in a `bg-subtle` icon square per the existing empty-state icon convention from `components/auth/auth-layout.tsx`), short message, `Link` back to `/editor` styled `text-brand`.
+- `08-editor-workspace-shell`: `app/editor/[roomId]/page.tsx` rewritten as the access-gated entry point: `getCurrentIdentity()` first — `redirect("/sign-in")` if no `userId` (defense in depth; `proxy.ts`'s `clerkMiddleware` already protects this route, but the spec's check-items ask for the page component itself to redirect). Then `getProjectAccess(roomId, userId, email)` — renders `<AccessDenied />` for both "project doesn't exist" and "project exists but no access" (spec treats these identically, no information leak about existence). Only on success does it fetch the owned/shared lists (via existing `lib/projects.ts` helpers) for the sidebar and render `<EditorShell projects={...} activeProjectId={roomId} />`.
+- `08-editor-workspace-shell`: `components/editor/editor-navbar.tsx` extended (not replaced) with optional `projectName`, `isAiSidebarOpen`, `onToggleAiSidebar` props — when `onToggleAiSidebar` is passed (i.e. only inside a workspace, never on the bare `/editor` project list) the navbar renders a `Share2` "Share" button (no `onClick` — intentionally inert, sharing behavior is explicitly out of scope for this unit) and a `PanelRightOpen`/`PanelRightClose` toggle button next to the existing `UserButton`. Center section shows `projectName` when present, empty otherwise — `/editor` (no active project) keeps rendering exactly as before.
+- `08-editor-workspace-shell`: `components/editor/ai-sidebar.tsx` (new) — right-hand slide-over placeholder, same floating-overlay/translate-x mechanics as the existing left `ProjectSidebar` (mirrored: `right-0` + `translate-x-full` when closed), centered `Sparkles` icon (`text-ai-text` token) and "AI chat is coming soon." text. This satisfies this spec's "right sidebar placeholder for future AI chat" — it is intentionally not the full AI chat sidebar noted in the old "Next Up" below (no chat logic, no message list, just the shell and open/close mechanics).
+- `08-editor-workspace-shell`: `components/editor/project-sidebar.tsx` gained an `activeProjectId?` prop; both the owned- and shared-project `<li>` rows get a `bg-subtle` background and `text-brand` name color when `project.id === activeProjectId`, satisfying "current room highlighted in the sidebar." Works for both owners and collaborators since the highlight check runs on both lists.
+- `08-editor-workspace-shell`: `components/editor/editor-shell.tsx` now owns `isAiSidebarOpen` state alongside the existing `isSidebarOpen`, passes `activeProject?.name` / the AI-toggle callback into `EditorNavbar` (only wires `onToggleAiSidebar` when `activeProjectId` is set), passes `activeProjectId` through to `ProjectSidebar`, and renders `<AiSidebar>` only when a project is active. The center canvas placeholder (`main`) and its "Canvas coming soon." message are unchanged from `07-wire-editor-home` — this unit only builds the surrounding chrome per its explicit scope note ("no real canvas logic").
+- `08-editor-workspace-shell`: Verified `npx tsc --noEmit`, `eslint` on all new/changed files, and `npx next build` all pass with no errors. Build output confirms `/editor/[roomId]` compiles (route table shows it in place of the old `/editor/[projectId]`). Manual authenticated click-through wasn't done — same Clerk-gated `curl`/build-only verification limitation noted in prior units.
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Build the right-hand slide-over AI sidebar referenced in `ui-context.md`'s layout patterns (no component exists yet).
-- Build the actual canvas (Liveblocks + React Flow) behind the `/editor/[projectId]` placeholder added in this unit.
+- Wire real AI chat behavior into the `AiSidebar` placeholder added in this unit (message list, input, model call).
+- Build the actual canvas (Liveblocks + React Flow) behind the `/editor/[roomId]` placeholder.
+- Implement real sharing behavior behind the inert Share button added in this unit (collaborator invite by email, using the existing `ProjectCollaborator` model).
 
 ## Open Questions
 
