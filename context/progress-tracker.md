@@ -4,7 +4,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Liveblocks realtime infrastructure setup (`context/feature-specs/10-liveblocks-setup.md`) — complete
+- Base collaborative canvas (`context/feature-specs/11-base-canvas.md`) — complete
 
 ## Current Goal
 
@@ -81,6 +81,13 @@ Update this file whenever the current phase, active feature, or implementation s
 - `10-liveblocks-setup`: Added `@liveblocks/node` to `package.json` (the other `@liveblocks/*` packages and `liveblocks.config.ts` already existed from a prior setup step outside the tracked units, but the server SDK needed for auth was missing). Added `LIVEBLOCKS_SECRET_KEY` to `.env.local` (empty placeholder in `.example.env.local`) — user supplied a real key (`sk_dev_...`) after initial implementation, confirmed via a re-run of `next build`.
 - `10-liveblocks-setup`: Verified `tsc --noEmit`, `eslint` on all new/changed files, and `next build` all pass with no errors, both before and after the real `LIVEBLOCKS_SECRET_KEY` was added (`next build` output confirms `/api/liveblocks-auth` compiles as a dynamic route in both runs). Verified via `npm run dev` + `curl` that the route redirects (`307` to `/sign-in`) when unauthenticated, consistent with how `proxy.ts` already protects `/api/projects` and the collaborators routes. Full authenticated round-trip (valid session token returned, room actually created) still wasn't verified — same Clerk-gated `curl` limitation noted in every prior unit since `04-project-dialogs` (a real browser session is needed to exercise it end-to-end).
 
+- `11-base-canvas`: `types/canvas.ts` (new) — `NODE_SHAPES` (the 6 shape literals from `ui-context.md`) and `NodeShape`; `NODE_COLORS` (the 8 fill/text pairs from `ui-context.md`, `as const satisfies Record<string, NodeColor>`) and `NodeColorName`; `CanvasNodeData` (`label`, `color: NodeColorName`, `shape: NodeShape`, plus `extends Record<string, unknown>` — required so it satisfies `@xyflow/react`'s `Node<NodeData>` generic constraint, confirmed via `tsc`); `CanvasNode = Node<CanvasNodeData, "canvasNode">` and `CanvasEdge = Edge<Record<string, never>, "canvasEdge">` — the two custom type identifiers the spec asks for. No custom node/edge React components were added (out of scope per the spec's own scope limits) — these are just the type-level discriminators for future use.
+- `11-base-canvas`: `components/canvas/canvas-room.tsx` (new, client) — `LiveblocksProvider` (`authEndpoint="/api/liveblocks-auth"`, matches the route built in `10-liveblocks-setup`) wraps `RoomProvider` (`id={roomId}`, `initialPresence={{ cursor: null, isThinking: false }}`). `isThinking: false` isn't mentioned in the spec text but is required to satisfy `liveblocks.config.ts`'s `Presence` type (added in `10-liveblocks-setup`, has both `cursor` and `isThinking` as required keys) — omitting it fails `tsc`. A local `CanvasErrorBoundary` (plain `Component` class, no new dependency — `react-error-boundary` isn't installed and adding it for one boundary was unnecessary) wraps `ClientSideSuspense` (`fallback` is a simple centered "Loading canvas…" message) around `FlowCanvas`; the boundary's fallback is a centered `AlertTriangle` message telling the user to refresh.
+- `11-base-canvas`: `components/canvas/flow-canvas.tsx` (new, client) — `useLiveblocksFlow<CanvasNode, CanvasEdge>({ suspense: true, nodes: { initial: [] }, edges: { initial: [] } })` from `@liveblocks/react-flow`, synced `nodes`/`edges`/`onNodesChange`/`onEdgesChange`/`onConnect`/`onDelete` passed straight into `<ReactFlow>`. `connectionMode={ConnectionMode.Loose}` (loose connection behavior), `fitView`, `<Background variant={BackgroundVariant.Dots} color="var(--border-default)" />` (dot-pattern, styled via the existing border token instead of a new hardcoded hex), `<MiniMap bgColor="var(--bg-surface)" className="border! border-surface-border!" />` (Tailwind v4 canonical `!` placement, dark-themed via existing tokens since the library's default white minimap would otherwise violate the dark-only theme rule in `ui-context.md`). No `<Controls>` and no `<Cursors>` (live-cursor rendering) were added — neither is in the spec's checklist, and scope limits say not to add anything beyond the listed items.
+- `11-base-canvas`: `components/editor/editor-shell.tsx` — the `activeProjectId` branch of the center `<main>` now renders `<CanvasRoom roomId={activeProjectId} />` instead of the old "Canvas coming soon" placeholder text; `<main>`'s className switches from the centering/padded layout (still used for the no-active-project `EditorHome` case) to `relative flex-1 overflow-hidden` so the canvas can fill all available space. `roomId` reuses `activeProjectId` directly per the `07-wire-editor-home` room-ID/project-ID alignment decision (no separate room-id column).
+- `11-base-canvas`: `app/editor/[roomId]/page.tsx` was already server-side (done in `08-editor-workspace-shell`) — no changes needed there, satisfying "keep the workspace page server-side."
+- `11-base-canvas`: Verified `tsc --noEmit`, `eslint` on all new/changed files, and `npm run build` all pass with no errors (build output confirms `/editor/[roomId]` still compiles). Verified via `npm run dev` + `curl` that both `/editor/{roomId}` and `POST /api/liveblocks-auth` still return `307` to `/sign-in` when unauthenticated — the new client canvas wiring doesn't bypass existing auth protection. Full authenticated click-through (canvas actually loading, presence connecting) wasn't done — same Clerk-gated limitation noted in every prior unit since `04-project-dialogs`.
+
 ## In Progress
 
 - None.
@@ -88,7 +95,7 @@ Update this file whenever the current phase, active feature, or implementation s
 ## Next Up
 
 - Wire real AI chat behavior into the `AiSidebar` placeholder added in `08-editor-workspace-shell` (message list, input, model call).
-- Build the actual canvas (Liveblocks + React Flow) behind the `/editor/[roomId]` placeholder, using `/api/liveblocks-auth` as the room's `authEndpoint`.
+- Add custom node and edge rendering for the canvas (using the `canvasNode`/`canvasEdge` types and `NODE_COLORS`/`NODE_SHAPES` from `types/canvas.ts`), plus canvas persistence (Vercel Blob snapshots) and starter template import — all explicitly out of scope for `11-base-canvas`.
 
 ## Open Questions
 

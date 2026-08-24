@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 
+import { CanvasRoom } from "@/components/canvas/canvas-room"
 import { AiSidebar } from "@/components/editor/ai-sidebar"
 import { CreateProjectDialog } from "@/components/editor/create-project-dialog"
 import { DeleteProjectDialog } from "@/components/editor/delete-project-dialog"
@@ -64,14 +65,15 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
           onRenameProject={openRenameDialog}
           onDeleteProject={openDeleteDialog}
         />
-        <main className="flex flex-1 items-center justify-center bg-base p-6">
+        <main
+          className={
+            activeProjectId
+              ? "relative flex-1 overflow-hidden bg-base"
+              : "flex flex-1 items-center justify-center bg-base p-6"
+          }
+        >
           {activeProjectId ? (
-            <div className="flex flex-col items-center gap-1.5 text-center">
-              <h1 className="text-lg font-medium text-copy-primary">
-                {activeProject?.name ?? "Workspace"}
-              </h1>
-              <p className="text-sm text-copy-muted">Canvas coming soon.</p>
-            </div>
+            <CanvasRoom roomId={activeProjectId} />
           ) : (
             <EditorHome onCreateProject={openCreateDialog} />
           )}

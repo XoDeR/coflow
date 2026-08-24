@@ -1,0 +1,69 @@
+"use client"
+
+import { Component, type ReactNode } from "react"
+import {
+  ClientSideSuspense,
+  LiveblocksProvider,
+  RoomProvider,
+} from "@liveblocks/react/suspense"
+import { AlertTriangle } from "lucide-react"
+
+import { FlowCanvas } from "@/components/canvas/flow-canvas"
+
+interface CanvasRoomProps {
+  roomId: string
+}
+
+export function CanvasRoom({ roomId }: CanvasRoomProps) {
+  return (
+    <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
+      <RoomProvider id={roomId} initialPresence={{ cursor: null, isThinking: false }}>
+        <div className="h-full w-full">
+          <CanvasErrorBoundary>
+            <ClientSideSuspense fallback={<CanvasLoading />}>
+              <FlowCanvas />
+            </ClientSideSuspense>
+          </CanvasErrorBoundary>
+        </div>
+      </RoomProvider>
+    </LiveblocksProvider>
+  )
+}
+
+function CanvasLoading() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-base">
+      <p className="text-sm text-copy-muted">Loading canvas…</p>
+    </div>
+  )
+}
+
+interface CanvasErrorBoundaryProps {
+  children: ReactNode
+}
+
+interface CanvasErrorBoundaryState {
+  hasError: boolean
+}
+
+class CanvasErrorBoundary extends Component<CanvasErrorBoundaryProps, CanvasErrorBoundaryState> {
+  state: CanvasErrorBoundaryState = { hasError: false }
+
+  static getDerivedStateFromError(): CanvasErrorBoundaryState {
+    return { hasError: true }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-base text-center">
+          <AlertTriangle className="h-8 w-8 text-copy-muted" />
+          <p className="text-sm text-copy-primary">Couldn&apos;t connect to the canvas.</p>
+          <p className="text-xs text-copy-muted">Refresh the page to try again.</p>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
