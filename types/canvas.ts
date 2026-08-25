@@ -38,3 +38,25 @@ export interface CanvasNodeData extends Record<string, unknown> {
 export type CanvasNode = Node<CanvasNodeData, "canvasNode">
 
 export type CanvasEdge = Edge<Record<string, never>, "canvasEdge">
+
+export interface NodeSize {
+  width: number
+  height: number
+}
+
+export const SHAPE_DEFAULT_SIZES = {
+  rectangle: { width: 160, height: 80 },
+  diamond: { width: 160, height: 160 },
+  circle: { width: 100, height: 100 },
+  pill: { width: 160, height: 64 },
+  cylinder: { width: 120, height: 100 },
+  hexagon: { width: 150, height: 100 },
+} as const satisfies Record<NodeShape, NodeSize>
+
+export const SHAPE_DRAG_MIME_TYPE = "application/x-coflow-shape"
+
+export interface ShapeDragPayload {
+  shape: NodeShape
+  width: number
+  height: number
+}
