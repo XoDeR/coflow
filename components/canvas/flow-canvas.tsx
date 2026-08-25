@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef, type DragEvent } from "react"
+import { useCallback, useEffect, useRef, useState, type DragEvent } from "react"
 import { useLiveblocksFlow } from "@liveblocks/react-flow"
 import {
   Background,
@@ -15,8 +15,15 @@ import {
 import "@xyflow/react/dist/style.css"
 
 import { CanvasNodeRenderer } from "@/components/canvas/canvas-node"
+import { NodeShapeVisual } from "@/components/canvas/node-shape-visual"
 import { ShapePanel } from "@/components/canvas/shape-panel"
-import { SHAPE_DRAG_MIME_TYPE, type CanvasEdge, type CanvasNode, type ShapeDragPayload } from "@/types/canvas"
+import {
+  NODE_COLORS,
+  SHAPE_DRAG_MIME_TYPE,
+  type CanvasEdge,
+  type CanvasNode,
+  type ShapeDragPayload,
+} from "@/types/canvas"
 
 const nodeTypes: NodeTypes = {
   canvasNode: CanvasNodeRenderer,
@@ -39,6 +46,28 @@ function FlowCanvasInner() {
     })
   const { screenToFlowPosition } = useReactFlow<CanvasNode, CanvasEdge>()
   const shapeCounterRef = useRef(0)
+
+  const [dragPreviewShape, setDragPreviewShape] = useState<ShapeDragPayload | null>(null)
+  const [dragPreviewPosition, setDragPreviewPosition] = useState({ x: 0, y: 0 })
+
+  const handleShapeDragStart = useCallback((payload: ShapeDragPayload) => {
+    setDragPreviewShape(payload)
+  }, [])
+
+  const handleShapeDragEnd = useCallback(() => {
+    setDragPreviewShape(null)
+  }, [])
+
+  useEffect(() => {
+    if (!dragPreviewShape) return
+
+    const handleWindowDragOver = (event: globalThis.DragEvent) => {
+      setDragPreviewPosition({ x: event.clientX, y: event.clientY })
+    }
+
+    window.addEventListener("dragover", handleWindowDragOver)
+    return () => window.removeEventListener("dragover", handleWindowDragOver)
+  }, [dragPreviewShape])
 
   const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -97,7 +126,26 @@ function FlowCanvasInner() {
         <Background variant={BackgroundVariant.Dots} color="var(--border-default)" />
         <MiniMap bgColor="var(--bg-surface)" className="border! border-surface-border!" />
       </ReactFlow>
-      <ShapePanel />
+      <ShapePanel onShapeDragStart={handleShapeDragStart} onShapeDragEnd={handleShapeDragEnd} />
+      {dragPreviewShape && (
+        <div
+          className="pointer-events-none fixed z-50 opacity-70"
+          style={{
+            left: dragPreviewPosition.x - dragPreviewShape.width / 2,
+            top: dragPreviewPosition.y - dragPreviewShape.height / 2,
+            width: dragPreviewShape.width,
+            height: dragPreviewShape.height,
+          }}
+        >
+          <NodeShapeVisual
+            shape={dragPreviewShape.shape}
+            width={dragPreviewShape.width}
+            height={dragPreviewShape.height}
+            fill={NODE_COLORS.neutral.fill}
+            stroke="var(--accent-primary)"
+          />
+        </div>
+      )}
     </div>
   )
 }
