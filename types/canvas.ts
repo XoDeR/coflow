@@ -53,6 +53,15 @@ export const SHAPE_DEFAULT_SIZES = {
   hexagon: { width: 150, height: 100 },
 } as const satisfies Record<NodeShape, NodeSize>
 
+export const SHAPE_MIN_SIZES = {
+  rectangle: { width: 100, height: 50 },
+  diamond: { width: 100, height: 100 },
+  circle: { width: 60, height: 60 },
+  pill: { width: 100, height: 40 },
+  cylinder: { width: 80, height: 60 },
+  hexagon: { width: 100, height: 70 },
+} as const satisfies Record<NodeShape, NodeSize>
+
 export const SHAPE_DRAG_MIME_TYPE = "application/x-coflow-shape"
 
 export interface ShapeDragPayload {

@@ -4,7 +4,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Node shape rendering (`context/feature-specs/13-node-shape.md`) — complete
+- Node editing (`context/feature-specs/14-node-editing.md`) — complete
 
 ## Current Goal
 
@@ -100,6 +100,12 @@ Update this file whenever the current phase, active feature, or implementation s
 - `13-node-shape`: Shape drag preview — `components/canvas/shape-panel.tsx`'s `onDragStart` now also calls a new `onShapeDragStart(payload)` prop (the same `ShapeDragPayload` already written to `dataTransfer`) and each button's new `onDragEnd` calls `onShapeDragEnd()`; it also calls `event.dataTransfer.setDragImage()` with a 1x1 transparent GIF so the browser's own drag snapshot doesn't show alongside the custom ghost. `components/canvas/flow-canvas.tsx`'s `FlowCanvasInner` owns the preview state: `dragPreviewShape` (set on drag start, cleared on drag end — the effect subscribe/unsubscribe boundary) and `dragPreviewPosition` (updated on every `window` `dragover` event, subscribed only while `dragPreviewShape` is set). Renders a `fixed`, `pointer-events-none`, `opacity-70` div centered on the cursor using `NodeShapeVisual` with `NODE_COLORS.neutral` (matching the actual color new nodes get on drop, per `12-shape-panel`'s drop handler) and an `accent-primary` stroke. `dragend` fires on the source element whether the drop succeeds, fails, or is cancelled (Esc), so no separate cleanup was needed in `handleDrop` — satisfies "hide the preview after drop or cancel" without touching drop/node-creation logic (scope limit: "don't change how dropped nodes are created").
 - `13-node-shape`: Verified `tsc --noEmit`, `eslint` on all new/changed files, and `npm run build` all pass with no errors (build output confirms `/editor/[roomId]` still compiles). Manual authenticated drag-and-drop / shape-rendering click-through wasn't done — same Clerk-gated limitation noted in every prior unit since `04-project-dialogs`.
 
+- `14-node-editing`: `types/canvas.ts` gained `SHAPE_MIN_SIZES` (`as const satisfies Record<NodeShape, NodeSize>`) — per-shape resize floors (e.g. `pill: 100x40`, `circle: 60x60`) rather than one global minimum, since the shapes' default sizes already vary too widely (a pill's default height is 64) for a single floor to make sense for every shape.
+- `14-node-editing`: `components/canvas/canvas-node.tsx` — added `<NodeResizer>` (from `@xyflow/react`, `nodeId={id}`, `isVisible={selected}`, `minWidth`/`minHeight` from `SHAPE_MIN_SIZES[data.shape]`). Handles are small circular dots (`h-2 w-2 rounded-full`, `border-brand`/`bg-surface` tokens) rather than the library's default squares, and `lineStyle={{ borderColor: "transparent" }}` hides the resizer's own bounding-box outline, since `NodeShapeVisual` already draws a selected-state border in `--accent-primary` and the resizer's default line would double it up — keeps handles "subtle," per spec.
+- `14-node-editing`: Same file — inline label editing. Double-clicking the centered label area (a wrapper `div` with `onDoubleClick`, `stopPropagation()` so it doesn't bubble to the pane's `zoomOnDoubleClick`) sets local `isEditing` state and renders a `textarea` absolutely positioned over the label's box (`absolute inset-0`, same `px-3 py-2` padding as the static label `span`, so there's no layout shift switching between the two). The `span` uses `pointer-events-none` so double-clicks always land on the wrapper `div` under it rather than needing bubble-up logic. Textarea carries `nodrag nopan` (React Flow's own convention for excluding an element from node-drag/canvas-pan handling) so typing/selecting text never starts a drag or pan, per spec. Updates go through `useReactFlow().updateNodeData(id, { label })` on every `onChange` — confirmed via `@xyflow/react`'s source that `updateNodeData`/`updateNode` route through `setNodes`, which the docs state "triggers the `onNodesChange` handler in a controlled flow," so this reaches `useLiveblocksFlow`'s `onNodesChange` the same way drag/resize changes already do, syncing into Liveblocks Storage with no new integration code needed. Closes on blur (`onBlur`) or `Escape` (`onKeyDown`, `preventDefault` + `setIsEditing(false)`) — no separate commit step since every keystroke already wrote through.
+- `14-node-editing`: Empty-label placeholder — static (non-editing) state shows literal `"Label"` in `var(--text-muted)` instead of the node's own text color when `data.label` is falsy, in the same centered position as real label text (same `span`, just conditional color/content) so there's no shift when a user types the first character. The textarea also carries a matching `placeholder="Label"` (`placeholder:text-copy-muted`) for the same empty state while actively editing.
+- `14-node-editing`: Verified `tsc --noEmit`, `eslint` on changed files, and `next build` all pass with no errors (`next build` output confirms `/editor/[roomId]` still compiles). Manual authenticated click-through (drag-resize, double-click-to-edit, blur/Escape close) wasn't done — same Clerk-gated limitation noted in every prior unit since `04-project-dialogs`; the dev server confirmed `/editor` still returns `307` to `/sign-in` when unauthenticated, so this change doesn't affect auth protection.
+
 ## In Progress
 
 - None.
@@ -107,8 +113,7 @@ Update this file whenever the current phase, active feature, or implementation s
 ## Next Up
 
 - Wire real AI chat behavior into the `AiSidebar` placeholder added in `08-editor-workspace-shell` (message list, input, model call).
-- Canvas persistence (Vercel Blob snapshots) and starter template import — explicitly out of scope for `11-base-canvas`/`12-shape-panel`/`13-node-shape`.
-- Node resize and label editing — explicitly deferred by `13-node-shape`'s scope limits.
+- Canvas persistence (Vercel Blob snapshots) and starter template import — explicitly out of scope for `11-base-canvas`/`12-shape-panel`/`13-node-shape`/`14-node-editing`.
 
 ## Open Questions
 
