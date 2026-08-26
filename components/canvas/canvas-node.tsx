@@ -11,9 +11,10 @@ import {
 } from "react"
 import { Handle, NodeResizer, Position, useReactFlow, type NodeProps } from "@xyflow/react"
 
+import { NodeColorToolbar } from "@/components/canvas/node-color-toolbar"
 import { NodeShapeVisual } from "@/components/canvas/node-shape-visual"
 import { NODE_COLORS, SHAPE_DEFAULT_SIZES, SHAPE_MIN_SIZES } from "@/types/canvas"
-import type { CanvasNode } from "@/types/canvas"
+import type { CanvasNode, NodeColorName } from "@/types/canvas"
 
 const HANDLE_POSITIONS = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
@@ -63,8 +64,16 @@ export function CanvasNodeRenderer({ id, data, selected, width, height }: NodePr
     }
   }, [])
 
+  const handleSelectColor = useCallback(
+    (color: NodeColorName) => {
+      updateNodeData(id, { color })
+    },
+    [id, updateNodeData]
+  )
+
   return (
     <div className="group relative flex h-full w-full items-center justify-center">
+      {selected && <NodeColorToolbar activeColor={data.color} onSelectColor={handleSelectColor} />}
       <NodeResizer
         nodeId={id}
         isVisible={selected}
