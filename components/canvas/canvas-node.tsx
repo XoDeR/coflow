@@ -27,13 +27,21 @@ export function CanvasNodeRenderer({ id, data, selected, width, height }: NodePr
   const minSize = SHAPE_MIN_SIZES[data.shape]
   const borderColor = selected ? "var(--accent-primary)" : "var(--border-default)"
 
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    textarea.style.height = "auto"
+    textarea.style.height = `${textarea.scrollHeight}px`
+  }, [])
+
   useEffect(() => {
     if (isEditing) {
       const textarea = textareaRef.current
       textarea?.focus()
       textarea?.select()
+      adjustTextareaHeight()
     }
-  }, [isEditing])
+  }, [isEditing, adjustTextareaHeight])
 
   const handleLabelDoubleClick = useCallback((event: MouseEvent<HTMLDivElement>) => {
     event.stopPropagation()
@@ -43,8 +51,9 @@ export function CanvasNodeRenderer({ id, data, selected, width, height }: NodePr
   const handleChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
       updateNodeData(id, { label: event.target.value })
+      adjustTextareaHeight()
     },
-    [id, updateNodeData]
+    [id, updateNodeData, adjustTextareaHeight]
   )
 
   const handleKeyDown = useCallback((event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -87,7 +96,8 @@ export function CanvasNodeRenderer({ id, data, selected, width, height }: NodePr
         {isEditing ? (
           <textarea
             ref={textareaRef}
-            className="nodrag nopan absolute inset-0 flex h-full w-full resize-none items-center justify-center border-none bg-transparent px-3 py-2 text-center text-sm outline-none placeholder:text-copy-muted"
+            rows={1}
+            className="nodrag nopan max-h-full w-full resize-none overflow-y-auto border-none bg-transparent text-center text-sm outline-none placeholder:text-copy-muted"
             style={{ color: text }}
             value={data.label}
             placeholder="Label"
