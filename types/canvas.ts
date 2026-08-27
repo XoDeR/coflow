@@ -37,7 +37,17 @@ export interface CanvasNodeData extends Record<string, unknown> {
 
 export type CanvasNode = Node<CanvasNodeData, "canvasNode">
 
-export type CanvasEdge = Edge<Record<string, never>, "canvasEdge">
+export interface CanvasEdgeData extends Record<string, unknown> {
+  label: string
+}
+
+export type CanvasEdge = Edge<CanvasEdgeData, "canvasEdge">
+
+/** Corner rounding passed to `getSmoothStepPath` for canvas edges. */
+export const EDGE_BORDER_RADIUS = 12
+
+/** Invisible interaction band around an edge — widens the hover/click target without thickening the visible stroke. */
+export const EDGE_INTERACTION_WIDTH = 24
 
 export interface NodeSize {
   width: number

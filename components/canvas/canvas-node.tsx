@@ -95,7 +95,7 @@ export function CanvasNodeRenderer({ id, data, selected, width, height }: NodePr
           key={position}
           type="source"
           position={position}
-          className="h-2! w-2! border! border-white! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
+          className="h-2! w-2! border! border-surface-border! bg-white! opacity-0 transition-opacity group-hover:opacity-100"
         />
       ))}
       <div
