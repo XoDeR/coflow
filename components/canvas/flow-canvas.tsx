@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react"
 import { useLiveblocksFlow } from "@liveblocks/react-flow"
+import { useCanRedo, useCanUndo, useRedo, useUndo } from "@liveblocks/react/suspense"
 import {
   addEdge,
   Background,
@@ -20,9 +21,11 @@ import {
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
 
+import { CanvasControls } from "@/components/canvas/canvas-controls"
 import { CanvasEdgeRenderer, EDGE_MARKER_END } from "@/components/canvas/canvas-edge"
 import { EdgeInteractionContext } from "@/components/canvas/edge-interaction-context"
 import { CanvasNodeRenderer } from "@/components/canvas/canvas-node"
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { NodeShapeVisual } from "@/components/canvas/node-shape-visual"
 import { ShapePanel } from "@/components/canvas/shape-panel"
 import {
@@ -61,8 +64,16 @@ function FlowCanvasInner() {
       nodes: { initial: [] },
       edges: { initial: [] },
     })
-  const { screenToFlowPosition } = useReactFlow<CanvasNode, CanvasEdge>()
+  const reactFlow = useReactFlow<CanvasNode, CanvasEdge>()
+  const { screenToFlowPosition } = reactFlow
   const shapeCounterRef = useRef(0)
+
+  const undo = useUndo()
+  const redo = useRedo()
+  const canUndo = useCanUndo()
+  const canRedo = useCanRedo()
+
+  useKeyboardShortcuts({ reactFlow, onUndo: undo, onRedo: redo })
 
   // Liveblocks' own `onConnect` adds a plain edge with no `type`, so new
   // connections would bypass the custom edge renderer. Build the `canvasEdge`
@@ -192,6 +203,13 @@ function FlowCanvasInner() {
           <Background variant={BackgroundVariant.Dots} color="var(--border-default)" />
           <MiniMap bgColor="var(--bg-surface)" className="border! border-surface-border!" />
         </ReactFlow>
+        <CanvasControls
+          reactFlow={reactFlow}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+        />
         <ShapePanel onShapeDragStart={handleShapeDragStart} onShapeDragEnd={handleShapeDragEnd} />
         {dragPreviewShape && (
           <div
