@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.56",
     "@base-ui/react": "^1.7.0",
     "@clerk/nextjs": "^7.8.0",
     "@clerk/ui": "^1.30.6",
@@ -19,9 +20,11 @@
     "@liveblocks/react-ui": "^3.24.1",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "@trigger.dev/react-hooks": "^4.5.13",
     "@trigger.dev/sdk": "4.5.13",
     "@vercel/blob": "^2.8.0",
     "@xyflow/react": "^12.11.3",
+    "ai": "^7.0.83",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
