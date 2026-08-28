@@ -23,6 +23,7 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(false)
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
+  const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false)
   const activeProject = activeProjectId
     ? projects.find((project) => project.id === activeProjectId)
     : undefined
@@ -54,6 +55,9 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
           activeProjectId ? () => setIsAiSidebarOpen((open) => !open) : undefined
         }
         onShare={activeProjectId ? () => setIsShareDialogOpen(true) : undefined}
+        onOpenTemplates={
+          activeProjectId ? () => setIsTemplatesModalOpen(true) : undefined
+        }
       />
       <div className="relative flex flex-1 overflow-hidden">
         <ProjectSidebar
@@ -73,7 +77,11 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
           }
         >
           {activeProjectId ? (
-            <CanvasRoom roomId={activeProjectId} />
+            <CanvasRoom
+              roomId={activeProjectId}
+              templatesModalOpen={isTemplatesModalOpen}
+              onTemplatesModalOpenChange={setIsTemplatesModalOpen}
+            />
           ) : (
             <EditorHome onCreateProject={openCreateDialog} />
           )}

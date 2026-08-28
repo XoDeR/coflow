@@ -12,16 +12,25 @@ import { FlowCanvas } from "@/components/canvas/flow-canvas"
 
 interface CanvasRoomProps {
   roomId: string
+  templatesModalOpen: boolean
+  onTemplatesModalOpenChange: (open: boolean) => void
 }
 
-export function CanvasRoom({ roomId }: CanvasRoomProps) {
+export function CanvasRoom({
+  roomId,
+  templatesModalOpen,
+  onTemplatesModalOpenChange,
+}: CanvasRoomProps) {
   return (
     <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
       <RoomProvider id={roomId} initialPresence={{ cursor: null, isThinking: false }}>
         <div className="h-full w-full">
           <CanvasErrorBoundary>
             <ClientSideSuspense fallback={<CanvasLoading />}>
-              <FlowCanvas />
+              <FlowCanvas
+                templatesModalOpen={templatesModalOpen}
+                onTemplatesModalOpenChange={onTemplatesModalOpenChange}
+              />
             </ClientSideSuspense>
           </CanvasErrorBoundary>
         </div>

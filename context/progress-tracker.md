@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Canvas ergonomics (`context/feature-specs/17-canvas-ergonomics.md`) — complete
+- Starter template library (`context/feature-specs/18-starter-template.md`) — complete
 
 ## Current Goal
 
-- Define the immediate implementation goal here.
+- Ship the starter template library: predefined `CanvasTemplate` data, an import modal with per-card diagram previews, and a navbar entry point that replaces the current canvas contents through the existing collaborative node/edge state.
 
 ## Completed
 
@@ -126,6 +126,15 @@ Update this file whenever the current phase, active feature, or implementation s
 - `17-canvas-ergonomics`: `components/canvas/flow-canvas.tsx` — `FlowCanvasInner` now keeps the full `useReactFlow()` instance (was destructuring only `screenToFlowPosition`), pulls `useUndo`/`useRedo`/`useCanUndo`/`useCanRedo` from `@liveblocks/react/suspense` (valid here — the component renders inside `RoomProvider` + `ClientSideSuspense`), calls `useKeyboardShortcuts({ reactFlow, onUndo: undo, onRedo: redo })`, and renders `<CanvasControls>` next to the existing `<ShapePanel>`. Undo/redo operate on Liveblocks room history, which already tracks the Storage mutations `useLiveblocksFlow` makes, so no extra history wiring was needed. Shape panel, node/edge rendering, and the collaborative-state setup are untouched, per the spec's scope limits.
 - `17-canvas-ergonomics`: Verified `tsc --noEmit`, `eslint` on all new/changed files, and `next build` all pass with no errors (build output confirms `/editor/[roomId]` still compiles). Manual authenticated click-through (zoom buttons, fit view, undo/redo enable-disable, keyboard shortcuts) wasn't done — same Clerk-gated limitation noted in every prior unit since `04-project-dialogs`.
 
+- `18-starter-template`: `components/editor/starter-templates.ts` (new) — `CanvasTemplate` interface (`id`, `name`, `description`, `nodes: CanvasNode[]`, `edges: CanvasEdge[]`) and `CANVAS_TEMPLATES` array with three templates: `microservices`, `cicd-pipeline`, `event-driven`. Two private helpers keep the data readable: `node(id, label, shape, color, x, y)` (sizes each node from `SHAPE_DEFAULT_SIZES[shape]`, sets `type: "canvasNode"`) and `edge(source, target, label?)` (`type: "canvasEdge"`, `data: { label }`, id `` `${source}--${target}` ``). Uses the shared `types/canvas.ts` types + `NODE_COLORS` names only — no hardcoded colors, no component imports.
+- `18-starter-template`: `components/editor/template-preview.tsx` (new) — `TemplatePreview({ template })`, a pure-SVG static preview (no React Flow instance). `placeNodes()` computes the bounding box from every node's position + size, scales it to fit a fixed `280x150` viewport (`PADDING` 12) preserving aspect ratio, and returns screen-space geometry incl. centers. Edges render first as plain `<line>`s between source/target centers (`stroke: var(--text-muted)`), then `PreviewShape` draws each node by its `data.shape` (ellipse / rounded rect / pill / diamond polygon / hexagon polygon / cylinder two-path) filled from `NODE_COLORS[data.color]` (`fill` + `text` as stroke). No label text — kept lightweight per spec.
+- `18-starter-template`: `components/editor/starter-templates-modal.tsx` (new, client) — `StarterTemplatesModal({ open, onOpenChange, onImport })` built on the untouched `components/ui/dialog.tsx` primitives. `sm:max-w-2xl` `DialogContent`, a scrollable (`max-h-[60vh] overflow-y-auto`) `sm:grid-cols-2` grid of cards; each card shows a fixed `h-32` `TemplatePreview`, the name, the description, and an `Import` button. `handleImport` calls `onImport(template)` then `onOpenChange(false)` to close.
+- `18-starter-template`: `components/editor/editor-navbar.tsx` — added optional `onOpenTemplates?: () => void` prop; when present, renders a ghost `LayoutTemplate` "Templates" button in the right nav section (before the Share button). Gated the same way as Share / the AI-sidebar toggle — only wired when a project is active.
+- `18-starter-template`: `components/editor/editor-shell.tsx` — owns `isTemplatesModalOpen` state, passes `onOpenTemplates={activeProjectId ? () => setIsTemplatesModalOpen(true) : undefined}` to the navbar and threads `templatesModalOpen` + `onTemplatesModalOpenChange` down through `CanvasRoom`. The modal itself is rendered inside the canvas tree (not at shell level) because the import handler needs the room's `useLiveblocksFlow` state.
+- `18-starter-template`: `components/canvas/canvas-room.tsx` — forwards the two new props through to `FlowCanvas`.
+- `18-starter-template`: `components/canvas/flow-canvas.tsx` — `FlowCanvasInner` renders `<StarterTemplatesModal>` and owns `handleImportTemplate(template)`: emits `remove` changes for every existing edge then every existing node via `onEdgesChange`/`onNodesChange`, then `add` changes for the template's nodes and edges (edges normalized exactly like `handleConnect` — `type: "canvasEdge"`, `markerEnd: EDGE_MARKER_END`, `data: { label }`), then `reactFlow.fitView({ duration: 300 })` after a 50ms tick so the store has the new nodes. All mutations go through the existing Liveblocks-synced change handlers — no direct Storage writes, canvas replaces rather than appends.
+- `18-starter-template`: Scope limits respected — no template saving, no custom user templates, no server persistence, no node/edge rendering changes. Verified `tsc --noEmit`, `eslint` on all new/changed files, and `npm run build` all pass with no errors (build output confirms `/editor/[roomId]` still compiles). Manual authenticated click-through (open modal, import a template, confirm the canvas is replaced and re-fit) wasn't done — same Clerk-gated limitation noted in every prior unit since `04-project-dialogs`.
+
 ## In Progress
 
 - None.
@@ -133,7 +142,7 @@ Update this file whenever the current phase, active feature, or implementation s
 ## Next Up
 
 - Wire real AI chat behavior into the `AiSidebar` placeholder added in `08-editor-workspace-shell` (message list, input, model call).
-- Canvas persistence (Vercel Blob snapshots) and starter template import — explicitly out of scope for `11-base-canvas`/`12-shape-panel`/`13-node-shape`/`14-node-editing`.
+- Canvas persistence (Vercel Blob snapshots) — explicitly out of scope for `11-base-canvas`/`12-shape-panel`/`13-node-shape`/`14-node-editing`.
 
 ## Open Questions
 

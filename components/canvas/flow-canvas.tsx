@@ -28,6 +28,8 @@ import { CanvasNodeRenderer } from "@/components/canvas/canvas-node"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { NodeShapeVisual } from "@/components/canvas/node-shape-visual"
 import { ShapePanel } from "@/components/canvas/shape-panel"
+import { StarterTemplatesModal } from "@/components/editor/starter-templates-modal"
+import type { CanvasTemplate } from "@/components/editor/starter-templates"
 import {
   NODE_COLORS,
   SHAPE_DRAG_MIME_TYPE,
@@ -49,15 +51,23 @@ const defaultEdgeOptions: DefaultEdgeOptions = {
   markerEnd: EDGE_MARKER_END,
 }
 
-export function FlowCanvas() {
+interface FlowCanvasProps {
+  templatesModalOpen: boolean
+  onTemplatesModalOpenChange: (open: boolean) => void
+}
+
+export function FlowCanvas({ templatesModalOpen, onTemplatesModalOpenChange }: FlowCanvasProps) {
   return (
     <ReactFlowProvider>
-      <FlowCanvasInner />
+      <FlowCanvasInner
+        templatesModalOpen={templatesModalOpen}
+        onTemplatesModalOpenChange={onTemplatesModalOpenChange}
+      />
     </ReactFlowProvider>
   )
 }
 
-function FlowCanvasInner() {
+function FlowCanvasInner({ templatesModalOpen, onTemplatesModalOpenChange }: FlowCanvasProps) {
   const { nodes, edges, onNodesChange, onEdgesChange, onDelete } =
     useLiveblocksFlow<CanvasNode, CanvasEdge>({
       suspense: true,
@@ -180,6 +190,36 @@ function FlowCanvasInner() {
     [onNodesChange, screenToFlowPosition]
   )
 
+  // Replace the whole canvas with a starter template: clear existing nodes/edges
+  // first, then add the template's, then fit the view. All routed through the
+  // same `onNodesChange`/`onEdgesChange` handlers that sync to Liveblocks Storage.
+  const handleImportTemplate = useCallback(
+    (template: CanvasTemplate) => {
+      if (edges.length > 0) {
+        onEdgesChange(edges.map((edge) => ({ type: "remove", id: edge.id })))
+      }
+      if (nodes.length > 0) {
+        onNodesChange(nodes.map((node) => ({ type: "remove", id: node.id })))
+      }
+
+      onNodesChange(template.nodes.map((node) => ({ type: "add", item: node })))
+      onEdgesChange(
+        template.edges.map((edge) => ({
+          type: "add",
+          item: {
+            ...edge,
+            type: "canvasEdge",
+            markerEnd: EDGE_MARKER_END,
+            data: { label: edge.data?.label ?? "" },
+          },
+        }))
+      )
+
+      window.setTimeout(() => reactFlow.fitView({ duration: 300 }), 50)
+    },
+    [nodes, edges, onNodesChange, onEdgesChange, reactFlow]
+  )
+
   return (
     <EdgeInteractionContext.Provider value={edgeInteraction}>
       <div className="relative h-full w-full" onDragOver={handleDragOver} onDrop={handleDrop}>
@@ -211,6 +251,11 @@ function FlowCanvasInner() {
           canRedo={canRedo}
         />
         <ShapePanel onShapeDragStart={handleShapeDragStart} onShapeDragEnd={handleShapeDragEnd} />
+        <StarterTemplatesModal
+          open={templatesModalOpen}
+          onOpenChange={onTemplatesModalOpenChange}
+          onImport={handleImportTemplate}
+        />
         {dragPreviewShape && (
           <div
             className="pointer-events-none fixed z-50 opacity-70"
