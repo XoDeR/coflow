@@ -6,6 +6,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 - Design agent — complete (`23-design-agent-logic`: `design-agent` task interprets the prompt with Gemini, writes nodes/edges into the Liveblocks room via `mutateFlow`, publishes AI presence + a room-wide status feed).
 - Shared AI presence/status UI — complete (`24-ai-presence-state`: generic `ai-status-feed` Storage key, sidebar status banner + input lockout during a run, thinking spinner on live cursors). The AI sidebar reads the feed but does not yet trigger generation.
+- Sidebar room chat — complete (`25-sidebar-chat-feed`: separate `ai-chat` Liveblocks Storage feed, room-scoped, wired into the AI Architect tab; participants send messages through the existing sidebar composer, Zod-validated before render). No AI replies / backend triggering yet.
 
 ## Current Goal
 
@@ -191,13 +192,21 @@ Update this file whenever the current phase, active feature, or implementation s
 - `24-ai-presence-state`: `components/canvas/canvas-cursors.tsx` — the `useOthers` selector now also reads `presence.thinking`; a small spinning `Loader2` shows inside a participant's cursor name badge when `thinking` is `true`, hidden otherwise. The design agent already sets `thinking: true` via `setAiPresence`, so its cursor spins during a run with no further wiring.
 - `24-ai-presence-state`: Verified `tsc --noEmit`, `eslint` on all new/changed files, and `npm run build` all pass. Manual authenticated multi-user click-through (feed banner, disabled input during a run, thinking spinner on the AI cursor) wasn't done — same Clerk-gated limitation noted in every prior unit since `04-project-dialogs`.
 
+- `25-sidebar-chat-feed`: `zod` added as a direct dependency (`^4.5.1`; was already present transitively via the AI SDK) — the spec asks for a Zod schema and `types/tasks.ts` previously only had hand-written guards.
+- `25-sidebar-chat-feed`: `types/tasks.ts` — new `AI_CHAT_FEED_KEY` (`"ai-chat"`), `aiChatMessageSchema` (Zod: `id`, `sender`, `role` `"user" | "assistant"`, `content`, `timestamp` — `id` added beyond the spec's four fields for a stable React key), `AiChatMessage` (`z.infer`), and `parseAiChatFeed(value)` which validates each entry individually, drops the invalid ones (rather than discarding the whole feed), and returns them sorted by `timestamp`. Kept in the same file as `ai-status-feed` but as a distinct key/type — the two feeds never mix.
+- `25-sidebar-chat-feed`: `liveblocks.config.ts` — `Storage["ai-chat"]?: AiChatMessage[]` (plain JSON array under the key, same shared-state mechanism as `aiActivity` / `ai-status-feed`, not a `LiveList` or a parallel channel). Room-scoped by virtue of being room Storage.
+- `25-sidebar-chat-feed`: `hooks/use-ai-chat.ts` (new) — `useAiChat()` returns `{ messages, sendMessage }`. Reads the feed via non-suspense `@liveblocks/react` `useStorage` (so the sidebar needn't sit inside `ClientSideSuspense`, matching `use-ai-status.ts`), memoizes `parseAiChatFeed(raw)`. `sendMessage` is a `useMutation` that appends `[...current, message]` under the key; the message `id` (`crypto.randomUUID()`) and `timestamp` (`Date.now()`) are generated inside the mutation callback, not during render.
+- `25-sidebar-chat-feed`: `components/editor/ai-architect-tab.tsx` — replaced the unit-20 local `messages` state with `useAiChat()`. Sender name comes from `useSelf((me) => me.info.name)` (the identity set in `/api/liveblocks-auth`), falling back to `"Anonymous"` while `self` loads. `send()` is wrapped in `useCallback` (the project's `react-hooks/purity` lint flags impure calls like `Date.now()` / `crypto.randomUUID()` in a bare component-body function) and its work is delegated to the mutation. Each bubble now shows sender + `HH:MM` timestamp above the message; a viewer's own `"user"` messages (matched by `sender === senderName`) keep the existing right-aligned brand-bordered style, everyone else's render left-aligned like the old assistant bubble. A `sendFailed` state renders a small `text-error` line above the composer when the mutation throws. Auto-scroll-to-bottom moved to a `useEffect` on `messages.length`. The unit-24 `isGenerating` composer lockout is unchanged; starter-prompt pills now post real chat messages.
+- `25-sidebar-chat-feed`: `AiSidebar` needed no change — it already renders `<AiArchitectTab>` inside `<EditorRoom>` (the `RoomProvider` lifted in `24-ai-presence-state`), which is all the new hooks require.
+- `25-sidebar-chat-feed`: Verified `tsc --noEmit`, `eslint` on all new/changed files, and `npm run build` all pass with no errors (build output confirms `/editor/[roomId]` still compiles). Manual authenticated multi-user click-through (two participants exchanging messages in a room) wasn't done — same Clerk-gated limitation noted in every prior unit since `04-project-dialogs`.
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Wire real AI chat behavior into `components/editor/ai-architect-tab.tsx` (assistant responses, model call, streaming) — trigger `POST /api/ai/design` and subscribe to the run with the token from `POST /api/ai/design/token`; render `Storage.aiActivity` / `ai-status-feed` progress there too.
+- Wire real AI chat behavior into `components/editor/ai-architect-tab.tsx` (assistant responses, model call, streaming) — trigger `POST /api/ai/design` and subscribe to the run with the token from `POST /api/ai/design/token`; render `Storage.aiActivity` / `ai-status-feed` progress there too. The `ai-chat` feed (`25-sidebar-chat-feed`) is now the message store the AI reply flow would append `role: "assistant"` messages to.
 - Real spec generation into the Specs tab.
 - Set `GOOGLE_AI_API_KEY` and `LIVEBLOCKS_SECRET_KEY` in the Trigger.dev project environment (dashboard / `syncEnvVars`) so the deployed `design-agent` task can reach Gemini and the room.
 - Real spec generation should publish through `ai-status-feed` (`types/tasks.ts`) so the sidebar banner covers it too.

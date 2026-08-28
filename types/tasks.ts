@@ -1,3 +1,5 @@
+import { z } from "zod"
+
 /**
  * Shared AI status feed.
  *
@@ -60,4 +62,52 @@ export function parseAiStatusMessage(value: unknown): AiStatusMessage | null {
     text,
     updatedAt: typeof updatedAt === "number" ? updatedAt : 0,
   }
+}
+
+/**
+ * Room chat feed (`25-sidebar-chat-feed`).
+ *
+ * Real-time chat between the people in a Liveblocks room, surfaced in the AI
+ * sidebar. It lives under the `ai-chat` key in Liveblocks Storage — the same
+ * shared-state mechanism the canvas and `ai-status-feed` use, not a parallel
+ * realtime channel — and is kept deliberately separate from `ai-status-feed`,
+ * which carries AI progress/presence, not conversation.
+ */
+
+/** Liveblocks Storage key the chat feed lives under. */
+export const AI_CHAT_FEED_KEY = "ai-chat" as const
+
+/**
+ * A single chat message. Zod schema (not a hand-written guard) per the feature
+ * spec; every feed entry is validated against it before the sidebar renders it,
+ * since Liveblocks Storage is shared, mutable state.
+ */
+export const aiChatMessageSchema = z.object({
+  /** Stable id, used as the React key. */
+  id: z.string().min(1),
+  /** Display name of the person who sent the message. */
+  sender: z.string().min(1),
+  /** Who authored it. Only `"user"` is produced today (no AI replies yet). */
+  role: z.enum(["user", "assistant"]),
+  /** The message text. */
+  content: z.string().min(1),
+  /** Epoch ms the message was sent. */
+  timestamp: z.number(),
+})
+
+export type AiChatMessage = z.infer<typeof aiChatMessageSchema>
+
+/**
+ * Narrow an untrusted Storage value into a list of chat messages, dropping any
+ * entry that fails validation rather than discarding the whole feed.
+ */
+export function parseAiChatFeed(value: unknown): AiChatMessage[] {
+  if (!Array.isArray(value)) return []
+
+  const messages: AiChatMessage[] = []
+  for (const entry of value) {
+    const result = aiChatMessageSchema.safeParse(entry)
+    if (result.success) messages.push(result.data)
+  }
+  return messages.sort((a, b) => a.timestamp - b.timestamp)
 }

@@ -1,11 +1,19 @@
 "use client"
 
-import { useRef, useState, type KeyboardEvent } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react"
 
+import { useSelf } from "@liveblocks/react"
 import { Bot, Loader2, SendHorizontal } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { useAiChat } from "@/hooks/use-ai-chat"
 import { cn } from "@/lib/utils"
 
 const STARTER_PROMPTS = [
@@ -14,41 +22,58 @@ const STARTER_PROMPTS = [
   "Build a CI/CD pipeline",
 ]
 
-interface ChatMessage {
-  id: string
-  role: "user" | "assistant"
-  content: string
-}
-
 interface AiArchitectTabProps {
   /** An AI run is in progress in this room — lock the composer. */
   isGenerating?: boolean
 }
 
+function formatTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
 export function AiArchitectTab({ isGenerating = false }: AiArchitectTabProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const { messages, sendMessage } = useAiChat()
+  const senderName = useSelf((me) => me.info.name) ?? "Anonymous"
+
   const [input, setInput] = useState("")
+  const [sendFailed, setSendFailed] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  function sendMessage(content: string) {
-    if (isGenerating) return
-    const trimmed = content.trim()
-    if (!trimmed) return
-    setMessages((prev) => [
-      ...prev,
-      { id: `${Date.now()}-${prev.length}`, role: "user", content: trimmed },
-    ])
-    setInput("")
-    requestAnimationFrame(() => {
-      const node = scrollRef.current
-      if (node) node.scrollTop = node.scrollHeight
-    })
-  }
+  useEffect(() => {
+    const node = scrollRef.current
+    if (node) node.scrollTop = node.scrollHeight
+  }, [messages.length])
+
+  const send = useCallback(
+    (content: string) => {
+      if (isGenerating) return
+      const trimmed = content.trim()
+      if (!trimmed) return
+
+      try {
+        sendMessage({
+          id: crypto.randomUUID(),
+          sender: senderName,
+          role: "user",
+          content: trimmed,
+          timestamp: Date.now(),
+        })
+        setInput("")
+        setSendFailed(false)
+      } catch {
+        setSendFailed(true)
+      }
+    },
+    [isGenerating, senderName, sendMessage]
+  )
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault()
-      sendMessage(input)
+      send(input)
     }
   }
 
@@ -61,15 +86,15 @@ export function AiArchitectTab({ isGenerating = false }: AiArchitectTabProps) {
               <Bot className="h-5 w-5 text-ai-text" />
             </div>
             <p className="max-w-60 text-sm text-copy-muted">
-              Describe a system and Coflow AI will help you architect it on the
-              canvas.
+              Start the conversation — messages are shared with everyone in this
+              room.
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               {STARTER_PROMPTS.map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
-                  onClick={() => sendMessage(prompt)}
+                  onClick={() => send(prompt)}
                   disabled={isGenerating}
                   className="rounded-full bg-subtle px-3 py-1.5 text-xs text-ai-text transition-colors hover:bg-subtle-border/40 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -80,24 +105,46 @@ export function AiArchitectTab({ isGenerating = false }: AiArchitectTabProps) {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  "max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap",
-                  message.role === "user"
-                    ? "self-end border-2 border-brand/50 bg-accent-dim text-copy-primary"
-                    : "self-start border border-surface-border bg-elevated text-ai-text"
-                )}
-              >
-                {message.content}
-              </div>
-            ))}
+            {messages.map((message) => {
+              const isOwn =
+                message.role === "user" && message.sender === senderName
+              return (
+                <div
+                  key={message.id}
+                  className={cn(
+                    "flex max-w-[85%] flex-col gap-1",
+                    isOwn ? "items-end self-end" : "items-start self-start"
+                  )}
+                >
+                  <div className="flex items-center gap-1.5 px-1 text-[0.7rem] text-copy-faint">
+                    <span className="font-medium text-copy-muted">
+                      {message.sender}
+                    </span>
+                    <span>{formatTime(message.timestamp)}</span>
+                  </div>
+                  <div
+                    className={cn(
+                      "rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap",
+                      isOwn
+                        ? "border-2 border-brand/50 bg-accent-dim text-copy-primary"
+                        : "border border-surface-border bg-elevated text-ai-text"
+                    )}
+                  >
+                    {message.content}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
 
       <div className="border-t border-surface-border p-3">
+        {sendFailed ? (
+          <p className="mb-1.5 text-[0.7rem] text-error">
+            Couldn’t send that message. Try again.
+          </p>
+        ) : null}
         <div className="flex items-end gap-2">
           <Textarea
             value={input}
@@ -105,15 +152,13 @@ export function AiArchitectTab({ isGenerating = false }: AiArchitectTabProps) {
             onKeyDown={handleKeyDown}
             disabled={isGenerating}
             placeholder={
-              isGenerating
-                ? "Coflow AI is working…"
-                : "Ask Coflow AI to design something…"
+              isGenerating ? "Coflow AI is working…" : "Message the room…"
             }
             className="max-h-40 min-h-18 flex-1 resize-none disabled:cursor-not-allowed disabled:opacity-60"
           />
           <Button
             size="icon"
-            onClick={() => sendMessage(input)}
+            onClick={() => send(input)}
             disabled={isGenerating || !input.trim()}
             aria-label={isGenerating ? "AI is generating" : "Send message"}
             className="bg-ai text-white hover:bg-ai/90"

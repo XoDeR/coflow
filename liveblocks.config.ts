@@ -2,7 +2,7 @@ import type { LiveblocksFlow } from "@liveblocks/react-flow";
 
 import type { AiActivity } from "./types/ai-design";
 import type { CanvasEdge, CanvasNode } from "./types/canvas";
-import type { AiStatusMessage } from "./types/tasks";
+import type { AiChatMessage, AiStatusMessage } from "./types/tasks";
 
 // Define Liveblocks types for your application
 // https://liveblocks.io/docs/api-reference/liveblocks-react#Typing-your-data
@@ -25,6 +25,10 @@ declare global {
       // Generic room-wide AI status feed (design + spec generation). Only the most
       // recent message is kept. Optional: present once any AI task has run here.
       "ai-status-feed"?: AiStatusMessage;
+      // Room chat feed — messages between the people in the room, shown in the AI
+      // sidebar. Separate from `ai-status-feed`. Optional: present once someone
+      // has sent the first message.
+      "ai-chat"?: AiChatMessage[];
     };
 
     // Custom user info set when authenticating with a secret key
