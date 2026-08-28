@@ -1,5 +1,5 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google"
-import { generateObject, jsonSchema } from "ai"
+import { generateText } from "ai"
 
 import {
   DESIGN_ACTION_TYPES,
@@ -53,51 +53,19 @@ interface RawPlan {
   actions?: RawAction[]
 }
 
-const planSchema = jsonSchema<RawPlan>({
-  type: "object",
-  properties: {
-    summary: {
-      type: "string",
-      description: "One short first-person sentence describing the change.",
-    },
-    actions: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          type: { type: "string", enum: [...DESIGN_ACTION_TYPES] },
-          id: {
-            type: "string",
-            description: "Stable kebab-case identifier for the node or edge.",
-          },
-          label: { type: "string" },
-          shape: { type: "string", enum: [...NODE_SHAPES] },
-          color: { type: "string", enum: COLOR_NAMES },
-          column: {
-            type: "number",
-            description: "Integer grid column, increasing left-to-right along the flow.",
-          },
-          row: {
-            type: "number",
-            description: "Integer grid row, separating parallel components.",
-          },
-          width: { type: "number" },
-          height: { type: "number" },
-          source: { type: "string", description: "Source node id (edges only)." },
-          target: { type: "string", description: "Target node id (edges only)." },
-        },
-        required: ["type", "id"],
-      },
-    },
-  },
-  required: ["summary", "actions"],
-})
-
 const SYSTEM_PROMPT = `You are Coflow's system-design agent. You turn a natural-language description of a software system into a diagram on a shared canvas by emitting a list of actions.
 
-Return JSON with:
-- "summary": one short first-person sentence, e.g. "I mapped out an event-driven order pipeline."
-- "actions": an ordered list of canvas actions.
+Respond with a single raw JSON object and nothing else — no prose, no markdown code fences. Shape:
+{
+  "summary": "I mapped out an event-driven order pipeline.",
+  "actions": [
+    { "type": "addNode", "id": "api-gateway", "label": "API Gateway", "shape": "rectangle", "color": "neutral", "column": 0, "row": 0 },
+    { "type": "addEdge", "id": "api-gateway--order-service", "source": "api-gateway", "target": "order-service", "label": "REST" }
+  ]
+}
+
+- "summary": one short first-person sentence describing the change.
+- "actions": an ordered list of canvas actions. List every addNode before the addEdge actions that reference it.
 
 Action types:
 - addNode: { id, label, shape, color, column, row }
@@ -142,14 +110,51 @@ export interface GenerateDesignPlanInput {
 export async function generateDesignPlan(
   input: GenerateDesignPlanInput
 ): Promise<DesignPlan> {
-  const { object } = await generateObject({
+  // `generateText` + tolerant parsing rather than `generateObject`: Gemini's
+  // constrained-decoding structured output is unreliable for this nested schema
+  // (and `generateObject` is deprecated in this AI SDK version). `normalizePlan`
+  // does the real validation.
+  const { text } = await generateText({
     model: google(MODEL),
-    schema: planSchema,
     system: SYSTEM_PROMPT,
     prompt: buildUserPrompt(input),
+    temperature: 0.3,
+    maxOutputTokens: 8000,
   })
 
-  return normalizePlan(object)
+  const parsed = parsePlanJson(text)
+  if (!parsed) {
+    throw new Error(
+      `Gemini did not return usable JSON (first 400 chars: ${text.slice(0, 400)})`
+    )
+  }
+
+  return normalizePlan(parsed)
+}
+
+/** Extract a JSON object from the model's reply, tolerating fences and stray prose. */
+function parsePlanJson(text: string): RawPlan | null {
+  const trimmed = text.trim()
+  const candidates = [trimmed]
+
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fenced?.[1]) candidates.push(fenced[1].trim())
+
+  const first = trimmed.indexOf("{")
+  const last = trimmed.lastIndexOf("}")
+  if (first !== -1 && last > first) candidates.push(trimmed.slice(first, last + 1))
+
+  for (const candidate of candidates) {
+    try {
+      const value = JSON.parse(candidate) as unknown
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        return value as RawPlan
+      }
+    } catch {
+      // fall through to the next candidate
+    }
+  }
+  return null
 }
 
 function buildUserPrompt({ prompt, graph }: GenerateDesignPlanInput): string {
