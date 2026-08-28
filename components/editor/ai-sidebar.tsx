@@ -1,8 +1,19 @@
 "use client"
 
-import { Bot, Download, FileText, Sparkles, X } from "lucide-react"
+import { useEffect, useState } from "react"
+import {
+  AlertTriangle,
+  Bot,
+  Check,
+  Download,
+  FileText,
+  Loader2,
+  Sparkles,
+  X,
+} from "lucide-react"
 
 import { AiArchitectTab } from "@/components/editor/ai-architect-tab"
+import { useAiStatus } from "@/hooks/use-ai-status"
 import { Button } from "@/components/ui/button"
 import {
   Tabs,
@@ -11,6 +22,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import type { AiStatusState } from "@/types/tasks"
 
 interface AiSidebarProps {
   isOpen: boolean
@@ -20,7 +32,30 @@ interface AiSidebarProps {
 const TAB_TRIGGER_CLASS =
   "flex-1 text-copy-muted hover:text-copy-secondary data-active:bg-ai/10 data-active:text-ai-text data-active:shadow-none dark:text-copy-muted dark:hover:text-copy-secondary dark:data-active:border-transparent dark:data-active:bg-ai/10 dark:data-active:text-ai-text"
 
+/** How long a finished (complete / error) status stays in the banner. */
+const STATUS_DISMISS_MS = 6000
+
+const STATUS_FALLBACK_TEXT: Record<AiStatusState, string> = {
+  working: "AI is working…",
+  complete: "AI finished",
+  error: "AI run failed",
+}
+
 export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
+  const { message, isGenerating } = useAiStatus()
+
+  const done = message?.state === "complete" || message?.state === "error"
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!done) return
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [done])
+
+  const showStatus =
+    message !== null &&
+    !(done && message.updatedAt > 0 && now - message.updatedAt > STATUS_DISMISS_MS)
+
   return (
     <aside
       aria-hidden={!isOpen}
@@ -51,6 +86,18 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
         </Button>
       </div>
 
+      {showStatus && message ? (
+        <div
+          aria-live="polite"
+          className="flex items-center gap-2 border-b border-surface-border bg-elevated px-4 py-2 text-xs text-copy-secondary"
+        >
+          <StatusIcon state={message.state} />
+          <span className="truncate">
+            {message.text?.trim() || STATUS_FALLBACK_TEXT[message.state]}
+          </span>
+        </div>
+      ) : null}
+
       <Tabs
         defaultValue="architect"
         className="flex flex-1 flex-col overflow-hidden"
@@ -70,7 +117,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
           value="architect"
           className="flex flex-1 flex-col overflow-hidden"
         >
-          <AiArchitectTab />
+          <AiArchitectTab isGenerating={isGenerating} />
         </TabsContent>
 
         <TabsContent
@@ -112,4 +159,14 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
       </Tabs>
     </aside>
   )
+}
+
+function StatusIcon({ state }: { state: AiStatusState }) {
+  if (state === "error") {
+    return <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-error" />
+  }
+  if (state === "complete") {
+    return <Check className="h-3.5 w-3.5 shrink-0 text-success" />
+  }
+  return <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-ai-text" />
 }

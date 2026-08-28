@@ -2,7 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent } from "react"
 
-import { Bot, SendHorizontal } from "lucide-react"
+import { Bot, Loader2, SendHorizontal } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -20,12 +20,18 @@ interface ChatMessage {
   content: string
 }
 
-export function AiArchitectTab() {
+interface AiArchitectTabProps {
+  /** An AI run is in progress in this room — lock the composer. */
+  isGenerating?: boolean
+}
+
+export function AiArchitectTab({ isGenerating = false }: AiArchitectTabProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
 
   function sendMessage(content: string) {
+    if (isGenerating) return
     const trimmed = content.trim()
     if (!trimmed) return
     setMessages((prev) => [
@@ -64,7 +70,8 @@ export function AiArchitectTab() {
                   key={prompt}
                   type="button"
                   onClick={() => sendMessage(prompt)}
-                  className="rounded-full bg-subtle px-3 py-1.5 text-xs text-ai-text transition-colors hover:bg-subtle-border/40"
+                  disabled={isGenerating}
+                  className="rounded-full bg-subtle px-3 py-1.5 text-xs text-ai-text transition-colors hover:bg-subtle-border/40 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {prompt}
                 </button>
@@ -96,21 +103,32 @@ export function AiArchitectTab() {
             value={input}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Coflow AI to design something…"
-            className="max-h-40 min-h-18 flex-1 resize-none"
+            disabled={isGenerating}
+            placeholder={
+              isGenerating
+                ? "Coflow AI is working…"
+                : "Ask Coflow AI to design something…"
+            }
+            className="max-h-40 min-h-18 flex-1 resize-none disabled:cursor-not-allowed disabled:opacity-60"
           />
           <Button
             size="icon"
             onClick={() => sendMessage(input)}
-            disabled={!input.trim()}
-            aria-label="Send message"
+            disabled={isGenerating || !input.trim()}
+            aria-label={isGenerating ? "AI is generating" : "Send message"}
             className="bg-ai text-white hover:bg-ai/90"
           >
-            <SendHorizontal />
+            {isGenerating ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <SendHorizontal />
+            )}
           </Button>
         </div>
         <p className="mt-1.5 text-[0.7rem] text-copy-faint">
-          Enter to send, Shift+Enter for a new line
+          {isGenerating
+            ? "The composer unlocks when generation finishes"
+            : "Enter to send, Shift+Enter for a new line"}
         </p>
       </div>
     </div>

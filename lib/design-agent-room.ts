@@ -20,6 +20,11 @@ import {
   type CanvasEdge,
   type CanvasNode,
 } from "@/types/canvas"
+import {
+  AI_STATUS_FEED_KEY,
+  type AiStatusMessage,
+  type AiStatusState,
+} from "@/types/tasks"
 
 /**
  * The Liveblocks side of the design agent: reading the room's canvas, applying
@@ -228,15 +233,34 @@ export function clearAiPresence(roomId: string): Promise<void> {
   return writeAiPresence(roomId, { cursor: null, thinking: false }, 2)
 }
 
-/** Publish the agent's current status to the room-wide feed. */
+/**
+ * Publish the agent's current status. Writes both the design-specific
+ * `aiActivity` entry (consumed by the canvas status pill) and the generic
+ * `ai-status-feed` message (consumed by the AI sidebar) in one Storage
+ * mutation — the same shared-state channel, not a parallel one.
+ */
 export async function publishAiActivity(
   roomId: string,
   runId: string,
   status: AiActivityStatus,
   message: string
 ): Promise<void> {
-  const activity: AiActivity = { runId, status, message, updatedAt: Date.now() }
+  const now = Date.now()
+  const activity: AiActivity = { runId, status, message, updatedAt: now }
+  const feedMessage: AiStatusMessage = {
+    state: feedStateFor(status),
+    text: message,
+    updatedAt: now,
+  }
   await getLiveblocksClient().mutateStorage(roomId, ({ root }) => {
     root.set("aiActivity", activity)
+    root.set(AI_STATUS_FEED_KEY, feedMessage)
   })
+}
+
+/** Collapse the five design-agent statuses onto the three generic feed states. */
+function feedStateFor(status: AiActivityStatus): AiStatusState {
+  if (status === "complete") return "complete"
+  if (status === "error") return "error"
+  return "working"
 }

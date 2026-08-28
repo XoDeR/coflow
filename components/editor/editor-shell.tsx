@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react"
 
 import { CanvasRoom } from "@/components/canvas/canvas-room"
+import { EditorRoom } from "@/components/canvas/editor-room"
 import { AiSidebar } from "@/components/editor/ai-sidebar"
 import { CreateProjectDialog } from "@/components/editor/create-project-dialog"
 import { DeleteProjectDialog } from "@/components/editor/delete-project-dialog"
@@ -83,31 +84,27 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
           onRenameProject={openRenameDialog}
           onDeleteProject={openDeleteDialog}
         />
-        <main
-          className={
-            activeProjectId
-              ? "relative flex-1 overflow-hidden bg-base"
-              : "flex flex-1 items-center justify-center bg-base p-6"
-          }
-        >
-          {activeProjectId ? (
-            <CanvasRoom
-              roomId={activeProjectId}
-              templatesModalOpen={isTemplatesModalOpen}
-              onTemplatesModalOpenChange={setIsTemplatesModalOpen}
-              onSaveStatusChange={setSaveStatus}
-              onRegisterSave={registerSave}
-            />
-          ) : (
-            <EditorHome onCreateProject={openCreateDialog} />
-          )}
-        </main>
         {activeProjectId ? (
-          <AiSidebar
-            isOpen={isAiSidebarOpen}
-            onClose={() => setIsAiSidebarOpen(false)}
-          />
-        ) : null}
+          <EditorRoom roomId={activeProjectId}>
+            <main className="relative flex-1 overflow-hidden bg-base">
+              <CanvasRoom
+                roomId={activeProjectId}
+                templatesModalOpen={isTemplatesModalOpen}
+                onTemplatesModalOpenChange={setIsTemplatesModalOpen}
+                onSaveStatusChange={setSaveStatus}
+                onRegisterSave={registerSave}
+              />
+            </main>
+            <AiSidebar
+              isOpen={isAiSidebarOpen}
+              onClose={() => setIsAiSidebarOpen(false)}
+            />
+          </EditorRoom>
+        ) : (
+          <main className="flex flex-1 items-center justify-center bg-base p-6">
+            <EditorHome onCreateProject={openCreateDialog} />
+          </main>
+        )}
       </div>
 
       <CreateProjectDialog

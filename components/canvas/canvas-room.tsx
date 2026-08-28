@@ -1,11 +1,7 @@
 "use client"
 
 import { Component, type ReactNode } from "react"
-import {
-  ClientSideSuspense,
-  LiveblocksProvider,
-  RoomProvider,
-} from "@liveblocks/react/suspense"
+import { ClientSideSuspense } from "@liveblocks/react/suspense"
 import { AlertTriangle } from "lucide-react"
 
 import { FlowCanvas } from "@/components/canvas/flow-canvas"
@@ -19,6 +15,11 @@ interface CanvasRoomProps {
   onRegisterSave: (save: () => void) => void
 }
 
+/**
+ * The collaborative canvas surface. Must be rendered inside an `<EditorRoom>`.
+ * Its own error boundary + Suspense wrap only the canvas, so the AI sidebar
+ * (a sibling inside the same room) stays mounted if the canvas fails to load.
+ */
 export function CanvasRoom({
   roomId,
   templatesModalOpen,
@@ -27,23 +28,19 @@ export function CanvasRoom({
   onRegisterSave,
 }: CanvasRoomProps) {
   return (
-    <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
-      <RoomProvider id={roomId} initialPresence={{ cursor: null, thinking: false }}>
-        <div className="h-full w-full">
-          <CanvasErrorBoundary>
-            <ClientSideSuspense fallback={<CanvasLoading />}>
-              <FlowCanvas
-                projectId={roomId}
-                templatesModalOpen={templatesModalOpen}
-                onTemplatesModalOpenChange={onTemplatesModalOpenChange}
-                onSaveStatusChange={onSaveStatusChange}
-                onRegisterSave={onRegisterSave}
-              />
-            </ClientSideSuspense>
-          </CanvasErrorBoundary>
-        </div>
-      </RoomProvider>
-    </LiveblocksProvider>
+    <div className="h-full w-full">
+      <CanvasErrorBoundary>
+        <ClientSideSuspense fallback={<CanvasLoading />}>
+          <FlowCanvas
+            projectId={roomId}
+            templatesModalOpen={templatesModalOpen}
+            onTemplatesModalOpenChange={onTemplatesModalOpenChange}
+            onSaveStatusChange={onSaveStatusChange}
+            onRegisterSave={onRegisterSave}
+          />
+        </ClientSideSuspense>
+      </CanvasErrorBoundary>
+    </div>
   )
 }
 

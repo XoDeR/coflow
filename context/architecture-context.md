@@ -52,7 +52,7 @@
 - Input: user prompt, project context, and current canvas state.
 - Execution: durable background task via Trigger.dev (`trigger/design-agent.ts`), using Gemini (`@ai-sdk/google`) to interpret the prompt.
 - Output: structured node and edge updates written into the shared Liveblocks room through the same flow storage the editor uses (`mutateFlow` from `@liveblocks/react-flow/node`).
-- Progress: the task publishes ephemeral AI presence (`setPresence`) and a room-wide status feed (`Storage.aiActivity`) so every participant sees the work in real time.
+- Progress: the task publishes ephemeral AI presence (`setPresence`, including a `thinking` flag rendered on the AI's live cursor) and, in one Storage mutation, both the design-specific `Storage.aiActivity` (canvas status pill) and the generic `Storage["ai-status-feed"]` message (AI sidebar banner, schema in `types/tasks.ts`) so every participant sees the work in real time. Spec generation should publish through the same `ai-status-feed` key.
 - Requires `GOOGLE_AI_API_KEY` and `LIVEBLOCKS_SECRET_KEY` in the Trigger.dev environment.
 
 ### Spec Generation

@@ -4,7 +4,8 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Design agent — complete (`23-design-agent-logic`: `design-agent` task interprets the prompt with Gemini, writes nodes/edges into the Liveblocks room via `mutateFlow`, publishes AI presence + a room-wide status feed). Not yet wired to the AI sidebar UI.
+- Design agent — complete (`23-design-agent-logic`: `design-agent` task interprets the prompt with Gemini, writes nodes/edges into the Liveblocks room via `mutateFlow`, publishes AI presence + a room-wide status feed).
+- Shared AI presence/status UI — complete (`24-ai-presence-state`: generic `ai-status-feed` Storage key, sidebar status banner + input lockout during a run, thinking spinner on live cursors). The AI sidebar reads the feed but does not yet trigger generation.
 
 ## Current Goal
 
@@ -184,16 +185,22 @@ Update this file whenever the current phase, active feature, or implementation s
 - `23-design-agent-logic`: `package.json` — pinned `@trigger.dev/react-hooks` to an exact `4.5.13` (was `^4.5.13`), which had been making the Trigger CLI abort under the Bash tool's CI env (`Version mismatch detected while running in CI`, noted in `22-design-agent-api` / `trigger-setup`). With the pin, `npx trigger.dev@4.5.13 dev` now builds a local worker successfully — confirming the `design-agent` task and its `@ai-sdk/google` / `ai` / `@liveblocks/*` / `@/`-alias imports all bundle for the Trigger runtime.
 - `23-design-agent-logic`: Verified `tsc --noEmit`, `eslint` on all new/changed files, `npm run build`, and `npx trigger.dev dev` (local worker builds) all pass. Not verified end-to-end: a real authenticated browser session triggering the task and watching nodes/presence/status land in the room (same Clerk-gated limitation as every prior unit), and the Gemini call itself (needs `GOOGLE_AI_API_KEY` set in the Trigger.dev environment, not just `.env.local`).
 
+- `24-ai-presence-state`: Shared AI activity indicators — UI, presence, and realtime status signals only (no generation flow). `types/tasks.ts` (new) — `AiStatusMessage` (`state: "working" | "complete" | "error"`, optional `text`, `updatedAt`) + `AI_STATUS_FEED_KEY` (`"ai-status-feed"`) + `parseAiStatusMessage` boundary validator (`type`, not `interface`, per Liveblocks LSON validation; mirrors `types/ai-design.ts`). `liveblocks.config.ts` — `Storage["ai-status-feed"]?: AiStatusMessage`, a generic room-wide feed kept separate from the design-specific `aiActivity` so spec generation can publish through it later. `lib/design-agent-room.ts` — `publishAiActivity` now writes both `aiActivity` and `ai-status-feed` in the same `mutateStorage` call (same shared-state mechanism, not a parallel channel); `aiActivityStateFor` maps the five `AiActivityStatus` values onto the three feed states. `hooks/use-ai-status.ts` (new) — `useAiStatus()` reads the feed via non-suspense `useStorage` (`@liveblocks/react`), returns `{ message, isGenerating }` (`isGenerating` = `state === "working"`), memoized on the raw Storage value.
+- `24-ai-presence-state`: Provider lift — `components/canvas/editor-room.tsx` (new) holds `LiveblocksProvider` + `RoomProvider` (with `initialPresence`), previously owned by `canvas-room.tsx`. `editor-shell.tsx` wraps both `<main>` (canvas) and `<AiSidebar>` in `<EditorRoom>` when a project is active, so the sidebar can read room Storage/presence; `RoomProvider` renders no DOM so `<main>` stays a flex child. `canvas-room.tsx` reduced to the error boundary + `ClientSideSuspense` + `FlowCanvas` (still its own component so the AI sidebar isn't gated by the canvas Suspense/error fallback).
+- `24-ai-presence-state`: `components/editor/ai-sidebar.tsx` — `useAiStatus()` drives a slim status banner between the header and the tabs (spinner / check / warning icon by state, single most-recent message text, auto-dismissed 6s after a finished state like `ai-activity-feed.tsx`); passes `isGenerating` into `AiArchitectTab`. `components/editor/ai-architect-tab.tsx` — new `isGenerating?` prop: `Textarea` disabled, starter-prompt pills disabled, `sendMessage` no-ops, and the send button shows a spinning `Loader2` + stays disabled while generation is active. The rest of the sidebar (tabs, Specs tab, close) stays usable; nothing dims the whole panel.
+- `24-ai-presence-state`: `components/canvas/canvas-cursors.tsx` — the `useOthers` selector now also reads `presence.thinking`; a small spinning `Loader2` shows inside a participant's cursor name badge when `thinking` is `true`, hidden otherwise. The design agent already sets `thinking: true` via `setAiPresence`, so its cursor spins during a run with no further wiring.
+- `24-ai-presence-state`: Verified `tsc --noEmit`, `eslint` on all new/changed files, and `npm run build` all pass. Manual authenticated multi-user click-through (feed banner, disabled input during a run, thinking spinner on the AI cursor) wasn't done — same Clerk-gated limitation noted in every prior unit since `04-project-dialogs`.
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Wire real AI chat behavior into `components/editor/ai-architect-tab.tsx` (assistant responses, model call, streaming) — trigger `POST /api/ai/design` and subscribe to the run with the token from `POST /api/ai/design/token`; render `Storage.aiActivity` progress there too.
+- Wire real AI chat behavior into `components/editor/ai-architect-tab.tsx` (assistant responses, model call, streaming) — trigger `POST /api/ai/design` and subscribe to the run with the token from `POST /api/ai/design/token`; render `Storage.aiActivity` / `ai-status-feed` progress there too.
 - Real spec generation into the Specs tab.
 - Set `GOOGLE_AI_API_KEY` and `LIVEBLOCKS_SECRET_KEY` in the Trigger.dev project environment (dashboard / `syncEnvVars`) so the deployed `design-agent` task can reach Gemini and the room.
-- Optional: render the `thinking` presence flag (e.g. a pulsing dot on the AI cursor) — it's published but nothing displays it yet.
+- Real spec generation should publish through `ai-status-feed` (`types/tasks.ts`) so the sidebar banner covers it too.
 
 ## Open Questions
 

@@ -2,6 +2,7 @@ import type { LiveblocksFlow } from "@liveblocks/react-flow";
 
 import type { AiActivity } from "./types/ai-design";
 import type { CanvasEdge, CanvasNode } from "./types/canvas";
+import type { AiStatusMessage } from "./types/tasks";
 
 // Define Liveblocks types for your application
 // https://liveblocks.io/docs/api-reference/liveblocks-react#Typing-your-data
@@ -21,6 +22,9 @@ declare global {
       // Shared AI design-agent status feed, written by the design-agent Trigger.dev task.
       // Optional: only present once the agent has run at least once in the room.
       aiActivity?: AiActivity;
+      // Generic room-wide AI status feed (design + spec generation). Only the most
+      // recent message is kept. Optional: present once any AI task has run here.
+      "ai-status-feed"?: AiStatusMessage;
     };
 
     // Custom user info set when authenticating with a secret key

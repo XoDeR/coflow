@@ -2,6 +2,7 @@
 
 import { useStore } from "@xyflow/react"
 import { shallow, useOthers } from "@liveblocks/react/suspense"
+import { Loader2 } from "lucide-react"
 
 /**
  * Live cursors for other room participants, rendered as an overlay on top of the
@@ -20,6 +21,7 @@ export function CanvasCursors() {
         cursor: other.presence.cursor,
         name: other.info.name,
         color: other.info.color,
+        thinking: other.presence.thinking,
       })),
     shallow
   )
@@ -34,6 +36,7 @@ export function CanvasCursors() {
             y={other.cursor.y * zoom + offsetY}
             name={other.name}
             color={other.color}
+            thinking={other.thinking}
           />
         ) : null
       )}
@@ -46,9 +49,10 @@ interface CursorProps {
   y: number
   name: string
   color: string
+  thinking: boolean
 }
 
-function Cursor({ x, y, name, color }: CursorProps) {
+function Cursor({ x, y, name, color, thinking }: CursorProps) {
   return (
     <div
       className="absolute top-0 left-0 select-none"
@@ -64,10 +68,11 @@ function Cursor({ x, y, name, color }: CursorProps) {
         />
       </svg>
       <span
-        className="absolute top-4 left-4 rounded-md px-1.5 py-0.5 text-[0.7rem] font-medium whitespace-nowrap"
+        className="absolute top-4 left-4 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.7rem] font-medium whitespace-nowrap"
         style={{ backgroundColor: color, color: "var(--bg-base)" }}
       >
         {name}
+        {thinking ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
       </span>
     </div>
   )
