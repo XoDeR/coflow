@@ -1,5 +1,6 @@
 import type { LiveblocksFlow } from "@liveblocks/react-flow";
 
+import type { AiActivity } from "./types/ai-design";
 import type { CanvasEdge, CanvasNode } from "./types/canvas";
 
 // Define Liveblocks types for your application
@@ -17,6 +18,9 @@ declare global {
       // The React Flow canvas, synced via useLiveblocksFlow (defaults to the "flow" key).
       // Optional: useLiveblocksFlow lazily creates it on first connect if missing.
       flow?: LiveblocksFlow<CanvasNode, CanvasEdge>;
+      // Shared AI design-agent status feed, written by the design-agent Trigger.dev task.
+      // Optional: only present once the agent has run at least once in the room.
+      aiActivity?: AiActivity;
     };
 
     // Custom user info set when authenticating with a secret key

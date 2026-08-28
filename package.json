@@ -20,7 +20,7 @@
     "@liveblocks/react-ui": "^3.24.1",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
-    "@trigger.dev/react-hooks": "^4.5.13",
+    "@trigger.dev/react-hooks": "4.5.13",
     "@trigger.dev/sdk": "4.5.13",
     "@vercel/blob": "^2.8.0",
     "@xyflow/react": "^12.11.3",

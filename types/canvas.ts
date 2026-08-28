@@ -1,4 +1,4 @@
-import type { Edge, Node } from "@xyflow/react"
+import type { Edge, EdgeMarker, Node } from "@xyflow/react"
 
 export const NODE_SHAPES = [
   "rectangle",
@@ -57,6 +57,19 @@ export const EDGE_BORDER_RADIUS = 12
 
 /** Invisible interaction band around an edge — widens the hover/click target without thickening the visible stroke. */
 export const EDGE_INTERACTION_WIDTH = 24
+
+/**
+ * End arrowhead shared by every canvas edge and the default edge options.
+ * `"arrowclosed"` is the string value of React Flow's `MarkerType.ArrowClosed` —
+ * spelled out here so this module stays free of `@xyflow/react` runtime imports
+ * and can be used from background tasks that write edges into the room.
+ */
+export const EDGE_MARKER_END = {
+  type: "arrowclosed",
+  width: 18,
+  height: 18,
+  color: "var(--text-primary)",
+} as const satisfies EdgeMarker
 
 export interface NodeSize {
   width: number

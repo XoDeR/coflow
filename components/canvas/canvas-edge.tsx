@@ -12,7 +12,6 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   getSmoothStepPath,
-  MarkerType,
   useReactFlow,
   type EdgeProps,
 } from "@xyflow/react"
@@ -21,17 +20,17 @@ import { useEdgeInteraction } from "@/components/canvas/edge-interaction-context
 import {
   EDGE_BORDER_RADIUS,
   EDGE_INTERACTION_WIDTH,
+  EDGE_MARKER_END,
   type CanvasEdge,
   type CanvasNode,
 } from "@/types/canvas"
 
-/** End arrowhead shared by every canvas edge and the default edge options. */
-export const EDGE_MARKER_END = {
-  type: MarkerType.ArrowClosed,
-  width: 18,
-  height: 18,
-  color: "var(--text-primary)",
-} as const
+/**
+ * Re-exported from `types/canvas` so existing importers (`@/components/canvas/canvas-edge`)
+ * keep working. The value now lives there so background tasks can build edges
+ * without pulling in `@xyflow/react`.
+ */
+export { EDGE_MARKER_END }
 
 export function CanvasEdgeRenderer({
   id,

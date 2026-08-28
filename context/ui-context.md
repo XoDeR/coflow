@@ -89,6 +89,25 @@ Small white circular handles, hidden by default, revealed on node hover. Appear 
 
 React Flow `<Background>` component. Canvas sits on the base background color.
 
+### AI-Generated Layout
+
+The design agent places nodes on an integer `(column, row)` grid. Grid cells are
+`320px` wide and `200px` tall (`DESIGN_GRID_COLUMN_STEP` / `DESIGN_GRID_ROW_STEP`
+in `types/ai-design.ts`). Columns increase left-to-right along the request/data
+flow; rows stack parallel components within a stage. The agent never emits pixel
+coordinates and never reuses a `(column, row)` cell. Generated nodes use the
+default size for their shape (`SHAPE_DEFAULT_SIZES`) and the `neutral` color
+unless grouping related concerns.
+
+### AI Presence and Status
+
+While the design agent runs it joins the room as an ephemeral participant
+("Coflow AI", indigo `--accent-ai`) via the Liveblocks Node `setPresence` API, so
+its cursor and avatar render through the existing presence components. A
+room-wide status feed (`Storage.aiActivity`) carries step-by-step messages
+(start → thinking → updating → complete/error), shown as a pill at the top-center
+of the canvas by `components/canvas/ai-activity-feed.tsx`.
+
 ## Component Library
 
 shadcn/ui on top of Tailwind. No custom design system. Components live in `components/ui/`. Use the `shadcn` CLI to add new components rather than writing them from scratch.

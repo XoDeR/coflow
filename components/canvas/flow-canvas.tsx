@@ -40,6 +40,7 @@ import "@xyflow/react/dist/style.css"
 import { useCanvasAutosave } from "@/hooks/use-canvas-autosave"
 import { useCanvasLoader } from "@/hooks/use-canvas-loader"
 import type { CanvasSaveStatus } from "@/hooks/use-canvas-autosave"
+import { AiActivityFeed } from "@/components/canvas/ai-activity-feed"
 import { CanvasControls } from "@/components/canvas/canvas-controls"
 import { CanvasCursors } from "@/components/canvas/canvas-cursors"
 import { CanvasEdgeRenderer, EDGE_MARKER_END } from "@/components/canvas/canvas-edge"
@@ -402,6 +403,7 @@ function FlowCanvasInner({
         </ReactFlow>
         <CanvasCursors />
         <PresenceAvatars />
+        <AiActivityFeed />
         <CanvasControls
           reactFlow={reactFlow}
           onUndo={undo}

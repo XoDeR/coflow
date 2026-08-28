@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Design-agent backend wiring — complete (`22-design-agent-api`: trigger route, `TaskRun` model, run-scoped token route, minimal `design-agent` task). No AI logic yet.
+- Design agent — complete (`23-design-agent-logic`: `design-agent` task interprets the prompt with Gemini, writes nodes/edges into the Liveblocks room via `mutateFlow`, publishes AI presence + a room-wide status feed). Not yet wired to the AI sidebar UI.
 
 ## Current Goal
 
-- Backend task wiring for design generation is in place. Next: add real AI logic to the `design-agent` task (node/edge generation, canvas writes) and a spec-generation task.
+- The design agent generates a real architecture into the shared room. Next: wire the AI Architect sidebar to trigger `POST /api/ai/design` and subscribe to the run, and build spec generation.
 
 ## Completed
 
@@ -174,15 +174,26 @@ Update this file whenever the current phase, active feature, or implementation s
 - `22-design-agent-api`: Verified `tsc --noEmit`, `eslint` on all new files, and `npm run build` all pass (build output lists `/api/ai/design` and `/api/ai/design/token` as dynamic routes). The `design-agent` task's dashboard sync wasn't verified via `trigger.dev dev` — the CLI aborts under the Bash tool's CI env (`Version mismatch detected while running in CI`), same limitation noted in `trigger-setup`; the task follows the already-synced `example` task's pattern exactly.
 - `trigger-setup`: Added Trigger.dev v4. `@trigger.dev/sdk` (dep) and `@trigger.dev/build` (devDep) pinned to an exact `4.5.13` — the CLI aborts the dev/deploy build when a `^`-ranged version is present ("Version mismatch detected while running in CI"). `trigger.config.ts` at repo root: `defineConfig` from `@trigger.dev/sdk`, `project: "proj_rllnoiliytnmwbhcyzuw"`, `runtime: "node"`, `maxDuration: 3600`, default retries, `dirs: ["./trigger"]`. `trigger/example.ts` — one exported `exampleTask` (`task()` from `@trigger.dev/sdk`, `id: "example"`, `maxDuration: 300`, logs + `wait.for` + returns). Used `trigger/` (not `src/trigger/`) to match the `trigger` boundary already documented in `architecture-context.md` / `code-standards.md`; there is no `src/` in this repo. `trigger.config.ts` added to `tsconfig.json` `include`; `.trigger` added to `.gitignore`. `TRIGGER_SECRET_KEY` placeholder in `.example.env.local`; real `tr_dev_…` key in `.env.local` (user-supplied). Verified: `npx trigger.dev@4.5.13 dev` builds a local worker (`default -> 20260828.1`) and the build's `index.json` lists the `example` task with the config's retry policy — i.e. it synced to the dashboard. `tsc --noEmit` passes.
 
+- `23-design-agent-logic`: `trigger/design-agent.ts` rewritten from the echo stub into the full agent. `run`: validate payload (`AbortTaskRunError` on empty prompt/room) → `setAiPresence(thinking)` + `publishAiActivity("starting")` → `readRoomGraph` → `publishAiActivity("thinking")` + `generateDesignPlan` → if no actions, publish `complete` and clear presence → else move the AI cursor to the plan's centroid, `publishAiActivity("updating")`, `applyDesignActions`, `publishAiActivity("complete")`, `clearAiPresence`. `catch` publishes `error` + clears presence (best-effort) then rethrows. `retry: { maxAttempts: 1 }` — one partial pass is safer than replaying canvas writes.
+- `23-design-agent-logic`: `lib/design-actions.ts` (new) — `generateDesignPlan({ prompt, graph })` calls Gemini `gemini-2.5-flash` via `@ai-sdk/google` `createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })` (the project's key var, not the SDK default `GOOGLE_GENERATIVE_AI_API_KEY`) + `ai` `generateObject`. Schema is a **flat** `jsonSchema` (one optional-field action object, `type` enum) rather than a discriminated union — Gemini structured output doesn't support `oneOf`/`anyOf`. `normalizePlan` narrows the loose model output into validated `DesignAction[]`, dropping malformed actions, defaulting shape→`rectangle`/color→`neutral`, clamping grid indices to non-negative ints. System prompt encodes the allowed shapes (by meaning), the 8 color names, and the integer-grid layout rules.
+- `23-design-agent-logic`: `lib/design-agent-room.ts` (new) — the Liveblocks side. `readRoomGraph` / `applyDesignActions` use `mutateFlow` from `@liveblocks/react-flow/node` (the server-side counterpart of `useLiveblocksFlow` — reuses the exact `flow` Storage the editor writes, no bypass). `applyAction` handles all seven action types; `addNode` sizes from `SHAPE_DEFAULT_SIZES` and positions via `(column, row) * step`; `addEdge` picks side handles (`"right"/"left"` etc., matching `canvas-node.tsx`'s handle ids) from relative node positions and normalizes the edge exactly like `handleConnect` (`type: "canvasEdge"`, `markerEnd: EDGE_MARKER_END`, `data.label`); `deleteNode` also removes connected edges. `setAiPresence` / `clearAiPresence` use the Liveblocks Node `setPresence` API (`userId: "coflow-ai-agent"`, name "Coflow AI", indigo, `ttl` 120 while running / 2 to retract — there's no delete-presence API). `publishAiActivity` writes `Storage.aiActivity` via `mutateStorage`.
+- `23-design-agent-logic`: `types/ai-design.ts` (new) — `DesignAction` union, `DesignPlan`, `AiActivity` (a `type`, not `interface` — Liveblocks Storage LSON validation rejects interfaces), `AiActivityStatus`, grid step constants.
+- `23-design-agent-logic`: `types/canvas.ts` — `EDGE_MARKER_END` moved here from `components/canvas/canvas-edge.tsx` (which now re-exports it) as `{ type: "arrowclosed", ... } satisfies EdgeMarker`, so background tasks can build edges without importing `@xyflow/react` at runtime (`"arrowclosed"` is the string value of `MarkerType.ArrowClosed`; `EdgeMarker.type` accepts the string form).
+- `23-design-agent-logic`: `liveblocks.config.ts` — `Storage` gained `aiActivity?: AiActivity`.
+- `23-design-agent-logic`: `components/canvas/ai-activity-feed.tsx` (new, client) — reads `Storage.aiActivity` via `useStorage`, renders a top-center pill on the canvas (spinner / check / warning icon by status), auto-hides finished states after 6s. Wired into `flow-canvas.tsx` next to `CanvasCursors` / `PresenceAvatars`. This is the only new UI — the AI cursor + avatar render through the existing `CanvasCursors` / `PresenceAvatars` (which consume `useOthers`) with no change, since `setPresence` makes the agent a normal room participant.
+- `23-design-agent-logic`: `package.json` — pinned `@trigger.dev/react-hooks` to an exact `4.5.13` (was `^4.5.13`), which had been making the Trigger CLI abort under the Bash tool's CI env (`Version mismatch detected while running in CI`, noted in `22-design-agent-api` / `trigger-setup`). With the pin, `npx trigger.dev@4.5.13 dev` now builds a local worker successfully — confirming the `design-agent` task and its `@ai-sdk/google` / `ai` / `@liveblocks/*` / `@/`-alias imports all bundle for the Trigger runtime.
+- `23-design-agent-logic`: Verified `tsc --noEmit`, `eslint` on all new/changed files, `npm run build`, and `npx trigger.dev dev` (local worker builds) all pass. Not verified end-to-end: a real authenticated browser session triggering the task and watching nodes/presence/status land in the room (same Clerk-gated limitation as every prior unit), and the Gemini call itself (needs `GOOGLE_AI_API_KEY` set in the Trigger.dev environment, not just `.env.local`).
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Add real AI logic to `trigger/design-agent.ts` (call an AI provider, generate nodes/edges, write them into the Liveblocks room).
-- Wire real AI chat behavior into `components/editor/ai-architect-tab.tsx` (assistant responses, model call, streaming) — likely triggering `POST /api/ai/design` and subscribing to the run with the token from `POST /api/ai/design/token`.
+- Wire real AI chat behavior into `components/editor/ai-architect-tab.tsx` (assistant responses, model call, streaming) — trigger `POST /api/ai/design` and subscribe to the run with the token from `POST /api/ai/design/token`; render `Storage.aiActivity` progress there too.
 - Real spec generation into the Specs tab.
+- Set `GOOGLE_AI_API_KEY` and `LIVEBLOCKS_SECRET_KEY` in the Trigger.dev project environment (dashboard / `syncEnvVars`) so the deployed `design-agent` task can reach Gemini and the room.
+- Optional: render the `thinking` presence flag (e.g. a pulsing dot on the AI cursor) — it's published but nothing displays it yet.
 
 ## Open Questions
 
