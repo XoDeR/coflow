@@ -26,6 +26,8 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  useEdges,
+  useNodes,
   useReactFlow,
   type DefaultEdgeOptions,
   type EdgeMouseHandler,
@@ -160,6 +162,47 @@ function FlowCanvasInner({
     },
     [onEdgesChange]
   )
+
+  // Delete selected nodes/edges on Backspace or Delete. React Flow's built-in
+  // key deletion is disabled (`deleteKeyCode={null}`); removal is routed through
+  // `onDelete` — the Liveblocks collaborative mutation from `useLiveblocksFlow`
+  // that actually deletes from shared Storage (its `onNodesChange` /
+  // `onEdgesChange` ignore `"remove"` changes) — so deletes reach every client.
+  // The listener is on `window` (not the wrapper element) because selecting a
+  // node/edge doesn't move DOM focus into the canvas, so a wrapper-level
+  // `onKeyDown` never fires — same reason the zoom / history shortcuts use
+  // `window`.
+  const flowNodes = useNodes<CanvasNode>()
+  const flowEdges = useEdges<CanvasEdge>()
+  const selectionRef = useRef({ nodes: flowNodes, edges: flowEdges })
+  useEffect(() => {
+    selectionRef.current = { nodes: flowNodes, edges: flowEdges }
+  }, [flowNodes, flowEdges])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Backspace" && event.key !== "Delete") return
+
+      const target = event.target
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return
+      }
+
+      const selectedNodes = selectionRef.current.nodes.filter((node) => node.selected)
+      const selectedEdges = selectionRef.current.edges.filter((edge) => edge.selected)
+      if (selectedNodes.length === 0 && selectedEdges.length === 0) return
+
+      event.preventDefault()
+      onDelete({ nodes: selectedNodes, edges: selectedEdges })
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [onDelete])
 
   // Edge hover/edit state lives here (not inside the edge component) so single-click
   // selection keeps working — React Flow's own edge handlers drive it.
@@ -335,6 +378,7 @@ function FlowCanvasInner({
           defaultEdgeOptions={defaultEdgeOptions}
           connectionLineType={ConnectionLineType.SmoothStep}
           connectionMode={ConnectionMode.Loose}
+          deleteKeyCode={null}
           fitView
         >
           <Background variant={BackgroundVariant.Dots} color="var(--border-default)" />
