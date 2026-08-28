@@ -1,8 +1,22 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type MouseEvent,
+} from "react"
 import { useLiveblocksFlow } from "@liveblocks/react-flow"
-import { useCanRedo, useCanUndo, useRedo, useUndo } from "@liveblocks/react/suspense"
+import {
+  useCanRedo,
+  useCanUndo,
+  useRedo,
+  useUndo,
+  useUpdateMyPresence,
+} from "@liveblocks/react/suspense"
 import {
   addEdge,
   Background,
@@ -22,11 +36,13 @@ import {
 import "@xyflow/react/dist/style.css"
 
 import { CanvasControls } from "@/components/canvas/canvas-controls"
+import { CanvasCursors } from "@/components/canvas/canvas-cursors"
 import { CanvasEdgeRenderer, EDGE_MARKER_END } from "@/components/canvas/canvas-edge"
 import { EdgeInteractionContext } from "@/components/canvas/edge-interaction-context"
 import { CanvasNodeRenderer } from "@/components/canvas/canvas-node"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { NodeShapeVisual } from "@/components/canvas/node-shape-visual"
+import { PresenceAvatars } from "@/components/canvas/presence-avatars"
 import { ShapePanel } from "@/components/canvas/shape-panel"
 import { StarterTemplatesModal } from "@/components/editor/starter-templates-modal"
 import type { CanvasTemplate } from "@/components/editor/starter-templates"
@@ -77,6 +93,22 @@ function FlowCanvasInner({ templatesModalOpen, onTemplatesModalOpenChange }: Flo
   const reactFlow = useReactFlow<CanvasNode, CanvasEdge>()
   const { screenToFlowPosition } = reactFlow
   const shapeCounterRef = useRef(0)
+
+  const updateMyPresence = useUpdateMyPresence()
+
+  // Broadcast the cursor in flow coordinates so other clients can re-project it
+  // through their own viewport transform.
+  const handleMouseMove = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
+      updateMyPresence({ cursor: { x: position.x, y: position.y } })
+    },
+    [screenToFlowPosition, updateMyPresence]
+  )
+
+  const handleMouseLeave = useCallback(() => {
+    updateMyPresence({ cursor: null })
+  }, [updateMyPresence])
 
   const undo = useUndo()
   const redo = useRedo()
@@ -230,6 +262,8 @@ function FlowCanvasInner({ templatesModalOpen, onTemplatesModalOpenChange }: Flo
           onEdgesChange={onEdgesChange}
           onConnect={handleConnect}
           onDelete={onDelete}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
           onEdgeMouseEnter={handleEdgeMouseEnter}
           onEdgeMouseLeave={handleEdgeMouseLeave}
           onEdgeDoubleClick={handleEdgeDoubleClick}
@@ -243,6 +277,8 @@ function FlowCanvasInner({ templatesModalOpen, onTemplatesModalOpenChange }: Flo
           <Background variant={BackgroundVariant.Dots} color="var(--border-default)" />
           <MiniMap bgColor="var(--bg-surface)" className="border! border-surface-border!" />
         </ReactFlow>
+        <CanvasCursors />
+        <PresenceAvatars />
         <CanvasControls
           reactFlow={reactFlow}
           onUndo={undo}

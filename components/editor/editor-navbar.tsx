@@ -20,6 +20,11 @@ interface EditorNavbarProps {
   onToggleAiSidebar?: () => void
   onShare?: () => void
   onOpenTemplates?: () => void
+  /**
+   * When false, the navbar omits its Clerk `UserButton` — the editor canvas view
+   * renders the current user inside its own top-right presence group instead.
+   */
+  showUserButton?: boolean
 }
 
 export function EditorNavbar({
@@ -30,6 +35,7 @@ export function EditorNavbar({
   onToggleAiSidebar,
   onShare,
   onOpenTemplates,
+  showUserButton = true,
 }: EditorNavbarProps) {
   return (
     <header className="flex h-14 shrink-0 items-center border-b border-surface-border bg-surface px-3">
@@ -81,7 +87,7 @@ export function EditorNavbar({
             </Button>
           </>
         ) : null}
-        <UserButton />
+        {showUserButton ? <UserButton /> : null}
       </div>
     </header>
   )

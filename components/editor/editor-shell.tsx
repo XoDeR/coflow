@@ -58,6 +58,7 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
         onOpenTemplates={
           activeProjectId ? () => setIsTemplatesModalOpen(true) : undefined
         }
+        showUserButton={!activeProjectId}
       />
       <div className="relative flex flex-1 overflow-hidden">
         <ProjectSidebar

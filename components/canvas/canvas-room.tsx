@@ -23,7 +23,7 @@ export function CanvasRoom({
 }: CanvasRoomProps) {
   return (
     <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
-      <RoomProvider id={roomId} initialPresence={{ cursor: null, isThinking: false }}>
+      <RoomProvider id={roomId} initialPresence={{ cursor: null, thinking: false }}>
         <div className="h-full w-full">
           <CanvasErrorBoundary>
             <ClientSideSuspense fallback={<CanvasLoading />}>
