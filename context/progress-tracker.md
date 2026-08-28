@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Presence avatars & live cursors (`context/feature-specs/19-presence-avatars-cursor.md`) — complete
+- AI sidebar shell (`context/feature-specs/20-ai-sidebar-shell.md`) — complete
 
 ## Current Goal
 
-- Show active room participants inside the editor canvas view: a top-right avatar group (collaborator avatars filtered against the current Clerk user + the existing Clerk `UserButton`, divider only when collaborators exist) and live React Flow cursors for other participants, broadcast through Liveblocks presence. Editor home navbar stays unchanged.
+- Turn the right-hand `AiSidebar` placeholder into a proper floating chat sidebar UI: header ("AI Workspace" / "Collaborate with Coflow AI" / bot icon / close button), shadcn `Tabs` with "AI Architect" and "Specs" tabs, an AI Architect tab with a scrollable chat area, empty state + starter prompt chips, and an auto-resizing textarea input (Enter submits, Shift+Enter newline), and a Specs tab with a `Generate Spec` button and a static demo spec card. UI structure only — no backend, no Liveblocks, no AI generation.
 
 ## Completed
 
@@ -142,13 +142,19 @@ Update this file whenever the current phase, active feature, or implementation s
 - `19-presence-avatars-cursor`: Verified `tsc --noEmit`, `eslint` on all new/changed files, and `npm run build` all pass with no errors (build output confirms `/editor/[roomId]` still compiles). Manual authenticated multi-user click-through (see collaborator avatars appear, cursors track across pan/zoom) wasn't done — same Clerk-gated limitation noted in every prior unit since `04-project-dialogs`.
 - `18-starter-template` (design pass, per `context/screenshots/18-starter-template-better-ui.png`): widened the modal to `sm:max-w-3xl` with a 3-up card grid (`sm:grid-cols-3`, `gap-4`), `rounded-3xl` + `p-6` per `ui-context.md`'s modal radius. Title bumped to `text-xl font-semibold`. Cards are now near-borderless (`border-surface-border/70`, `rounded-2xl`) with a hover lift (`hover:border-subtle-border hover:bg-surface/40`); preview sits in its own `h-36` bordered `bg-base` well; Import is a full-width `outline` button with a `Download` icon. Replaced the foundation close button (`showCloseButton={false}`) with a circular `outline` `DialogClose` at `top-5 right-5`. `TemplatePreview` viewport padding tightened (`12 → 8`) so the diagrams fill more of the well. Text content unchanged.
 
+- `20-ai-sidebar-shell`: `components/editor/ai-sidebar.tsx` rewritten from the "coming soon" placeholder (`08-editor-workspace-shell`) into the real chat-shell UI, keeping the exact same `{ isOpen, onClose }` parent-controlled contract and the existing floating overlay mechanics (`fixed top-14 right-0 bottom-0`, `translate-x-full` + `pointer-events-none` when closed, 200ms `translate-x` transition, `bg-surface/95 backdrop-blur-sm border-l border-surface-border`). Added `shadow-2xl` — the spec's step 1 asks for "the current shadow treatment" and the placeholder had none; a floating panel shadow is the minimal reading. Header: `Bot` icon in a `bg-subtle` `rounded-xl` square, "AI Workspace" title (`text-copy-primary`), "Collaborate with Coflow AI" subtitle (`text-copy-muted`), existing ghost `icon-sm` close button. shadcn `Tabs` (`defaultValue="architect"`) with "AI Architect" / "Specs" triggers — the spec's loose token names mapped to real tokens: active tab `data-active:bg-ai/10 data-active:text-ai-text` (the indigo AI accent, since the surface is the AI sidebar; `dark:data-active:*` duplicated so the shadcn base-ui trigger's own `dark:data-active:bg-input/30` doesn't win), inactive `text-copy-muted`.
+- `20-ai-sidebar-shell`: `components/editor/ai-architect-tab.tsx` (new) — split out because it carries all the interaction state (code-standards "keep modules small and single-purpose"). Local `messages` state (`ChatMessage[]`, `role: "user" | "assistant"`), no backend/AI call per scope limits — `sendMessage` only appends a user bubble and clears the input, then scrolls the chat area to the bottom on the next frame. Empty state (shown while `messages.length === 0`): `Bot` icon in a `bg-subtle rounded-2xl` square, one-line description, three starter-prompt pills ("Design an e-commerce backend", "Create a chat app architecture", "Build a CI/CD pipeline") styled `rounded-full bg-subtle text-ai-text` (spec's `text-accent-text` → `text-ai-text`); clicking a pill calls `sendMessage(prompt)`. Message bubbles: user right-aligned (`self-end border-2 border-brand/50 bg-accent-dim text-copy-primary` — spec named the brand/cyan tokens explicitly here), assistant left-aligned (`self-start border border-surface-border bg-elevated text-ai-text`). Input row: shadcn `Textarea` (its built-in `field-sizing-content` gives the auto-resize) capped `min-h-[72px] max-h-40` (≈72–160px per spec), `resize-none`; `Enter` submits, `Shift+Enter` inserts a newline (`onKeyDown` `preventDefault` on plain Enter); send `Button` `size="icon"` `bg-ai text-white` (spec's `bg-accent text-white` — indigo, the only app accent that carries white text at adequate contrast), disabled while the trimmed input is empty.
+- `20-ai-sidebar-shell`: Specs tab (inline in `ai-sidebar.tsx` — static, ~25 lines): full-width `Generate Spec` `Button` (`bg-ai text-white`, `Sparkles` icon, no handler — no backend per scope), then one demo spec card (`rounded-2xl border border-surface-border bg-elevated`) with a `FileText` icon square, a title, a `line-clamp-3` snippet, and a `disabled` outline `Download` button.
+- `20-ai-sidebar-shell`: No change to `components/editor/editor-shell.tsx` or the navbar toggle — the `AiSidebar` props (`isOpen`, `onClose`) and its render site are unchanged, so the existing open/close wiring from `08-editor-workspace-shell` still drives it (scope limit: "don't rebuild the existing sidebar open/close behavior"). No Liveblocks, no `thinking` presence use, no message persistence.
+- `20-ai-sidebar-shell`: Verified `tsc --noEmit`, `eslint` on both new/changed files, and `npm run build` all pass with no errors (build output confirms `/editor/[roomId]` still compiles). Manual authenticated click-through (open sidebar, switch tabs, send a message, starter chips) wasn't done — same Clerk-gated limitation noted in every prior unit since `04-project-dialogs`.
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Wire real AI chat behavior into the `AiSidebar` placeholder added in `08-editor-workspace-shell` (message list, input, model call).
+- Wire real AI chat behavior into `components/editor/ai-architect-tab.tsx` (assistant responses, model call, streaming) and real spec generation into the Specs tab.
 - Canvas persistence (Vercel Blob snapshots) — explicitly out of scope for `11-base-canvas`/`12-shape-panel`/`13-node-shape`/`14-node-editing`.
 
 ## Open Questions
