@@ -10,7 +10,9 @@ import {
   Share2,
 } from "lucide-react"
 
+import { CanvasSaveButton } from "@/components/canvas/canvas-save-button"
 import { Button } from "@/components/ui/button"
+import type { CanvasSaveStatus } from "@/hooks/use-canvas-autosave"
 
 interface EditorNavbarProps {
   isSidebarOpen: boolean
@@ -20,6 +22,8 @@ interface EditorNavbarProps {
   onToggleAiSidebar?: () => void
   onShare?: () => void
   onOpenTemplates?: () => void
+  /** Autosave status for the active canvas; omitted outside a workspace. */
+  saveStatus?: CanvasSaveStatus
   /**
    * When false, the navbar omits its Clerk `UserButton` — the editor canvas view
    * renders the current user inside its own top-right presence group instead.
@@ -35,6 +39,7 @@ export function EditorNavbar({
   onToggleAiSidebar,
   onShare,
   onOpenTemplates,
+  saveStatus,
   showUserButton = true,
 }: EditorNavbarProps) {
   return (
@@ -61,6 +66,7 @@ export function EditorNavbar({
         ) : null}
       </div>
       <div className="flex flex-1 items-center justify-end gap-1">
+        {saveStatus ? <CanvasSaveButton status={saveStatus} /> : null}
         {onOpenTemplates ? (
           <Button variant="ghost" size="sm" onClick={onOpenTemplates}>
             <LayoutTemplate />

@@ -12,6 +12,7 @@ import { ProjectSidebar } from "@/components/editor/project-sidebar"
 import { RenameProjectDialog } from "@/components/editor/rename-project-dialog"
 import { ShareDialog } from "@/components/editor/share-dialog"
 import { useProjectActions } from "@/hooks/use-project-actions"
+import type { CanvasSaveStatus } from "@/hooks/use-canvas-autosave"
 import type { Project } from "@/types/project"
 
 interface EditorShellProps {
@@ -24,6 +25,7 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
   const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(false)
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<CanvasSaveStatus>("idle")
   const activeProject = activeProjectId
     ? projects.find((project) => project.id === activeProjectId)
     : undefined
@@ -58,6 +60,7 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
         onOpenTemplates={
           activeProjectId ? () => setIsTemplatesModalOpen(true) : undefined
         }
+        saveStatus={activeProjectId ? saveStatus : undefined}
         showUserButton={!activeProjectId}
       />
       <div className="relative flex flex-1 overflow-hidden">
@@ -82,6 +85,7 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
               roomId={activeProjectId}
               templatesModalOpen={isTemplatesModalOpen}
               onTemplatesModalOpenChange={setIsTemplatesModalOpen}
+              onSaveStatusChange={setSaveStatus}
             />
           ) : (
             <EditorHome onCreateProject={openCreateDialog} />

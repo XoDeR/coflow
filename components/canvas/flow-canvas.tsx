@@ -35,6 +35,9 @@ import {
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
 
+import { useCanvasAutosave } from "@/hooks/use-canvas-autosave"
+import { useCanvasLoader } from "@/hooks/use-canvas-loader"
+import type { CanvasSaveStatus } from "@/hooks/use-canvas-autosave"
 import { CanvasControls } from "@/components/canvas/canvas-controls"
 import { CanvasCursors } from "@/components/canvas/canvas-cursors"
 import { CanvasEdgeRenderer, EDGE_MARKER_END } from "@/components/canvas/canvas-edge"
@@ -51,6 +54,7 @@ import {
   SHAPE_DRAG_MIME_TYPE,
   type CanvasEdge,
   type CanvasNode,
+  type CanvasSnapshot,
   type ShapeDragPayload,
 } from "@/types/canvas"
 
@@ -68,22 +72,36 @@ const defaultEdgeOptions: DefaultEdgeOptions = {
 }
 
 interface FlowCanvasProps {
+  projectId: string
   templatesModalOpen: boolean
   onTemplatesModalOpenChange: (open: boolean) => void
+  onSaveStatusChange: (status: CanvasSaveStatus) => void
 }
 
-export function FlowCanvas({ templatesModalOpen, onTemplatesModalOpenChange }: FlowCanvasProps) {
+export function FlowCanvas({
+  projectId,
+  templatesModalOpen,
+  onTemplatesModalOpenChange,
+  onSaveStatusChange,
+}: FlowCanvasProps) {
   return (
     <ReactFlowProvider>
       <FlowCanvasInner
+        projectId={projectId}
         templatesModalOpen={templatesModalOpen}
         onTemplatesModalOpenChange={onTemplatesModalOpenChange}
+        onSaveStatusChange={onSaveStatusChange}
       />
     </ReactFlowProvider>
   )
 }
 
-function FlowCanvasInner({ templatesModalOpen, onTemplatesModalOpenChange }: FlowCanvasProps) {
+function FlowCanvasInner({
+  projectId,
+  templatesModalOpen,
+  onTemplatesModalOpenChange,
+  onSaveStatusChange,
+}: FlowCanvasProps) {
   const { nodes, edges, onNodesChange, onEdgesChange, onDelete } =
     useLiveblocksFlow<CanvasNode, CanvasEdge>({
       suspense: true,
@@ -251,6 +269,43 @@ function FlowCanvasInner({ templatesModalOpen, onTemplatesModalOpenChange }: Flo
     },
     [nodes, edges, onNodesChange, onEdgesChange, reactFlow]
   )
+
+  // Load a previously saved canvas snapshot into an empty room on mount. Edges
+  // are normalized exactly like `handleConnect` / `handleImportTemplate` so the
+  // custom renderer picks them up.
+  const applySnapshot = useCallback(
+    (snapshot: CanvasSnapshot) => {
+      onNodesChange(snapshot.nodes.map((node) => ({ type: "add", item: node })))
+      onEdgesChange(
+        snapshot.edges.map((edge) => ({
+          type: "add",
+          item: {
+            ...edge,
+            type: "canvasEdge",
+            markerEnd: EDGE_MARKER_END,
+            data: { label: edge.data?.label ?? "" },
+          },
+        }))
+      )
+      window.setTimeout(() => reactFlow.fitView({ duration: 300 }), 50)
+    },
+    [onNodesChange, onEdgesChange, reactFlow]
+  )
+
+  const { isLoaded } = useCanvasLoader({
+    projectId,
+    nodeCount: nodes.length,
+    edgeCount: edges.length,
+    onLoad: applySnapshot,
+  })
+
+  useCanvasAutosave({
+    projectId,
+    nodes,
+    edges,
+    enabled: isLoaded,
+    onStatusChange: onSaveStatusChange,
+  })
 
   return (
     <EdgeInteractionContext.Provider value={edgeInteraction}>

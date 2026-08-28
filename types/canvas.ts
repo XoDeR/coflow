@@ -43,6 +43,15 @@ export interface CanvasEdgeData extends Record<string, unknown> {
 
 export type CanvasEdge = Edge<CanvasEdgeData, "canvasEdge">
 
+/**
+ * Serialized canvas graph persisted to Vercel Blob. Prisma only stores the blob
+ * URL (`Project.canvasJsonPath`); the nodes and edges themselves live here.
+ */
+export interface CanvasSnapshot {
+  nodes: CanvasNode[]
+  edges: CanvasEdge[]
+}
+
 /** Corner rounding passed to `getSmoothStepPath` for canvas edges. */
 export const EDGE_BORDER_RADIUS = 12
 

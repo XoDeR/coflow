@@ -9,17 +9,20 @@ import {
 import { AlertTriangle } from "lucide-react"
 
 import { FlowCanvas } from "@/components/canvas/flow-canvas"
+import type { CanvasSaveStatus } from "@/hooks/use-canvas-autosave"
 
 interface CanvasRoomProps {
   roomId: string
   templatesModalOpen: boolean
   onTemplatesModalOpenChange: (open: boolean) => void
+  onSaveStatusChange: (status: CanvasSaveStatus) => void
 }
 
 export function CanvasRoom({
   roomId,
   templatesModalOpen,
   onTemplatesModalOpenChange,
+  onSaveStatusChange,
 }: CanvasRoomProps) {
   return (
     <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
@@ -28,8 +31,10 @@ export function CanvasRoom({
           <CanvasErrorBoundary>
             <ClientSideSuspense fallback={<CanvasLoading />}>
               <FlowCanvas
+                projectId={roomId}
                 templatesModalOpen={templatesModalOpen}
                 onTemplatesModalOpenChange={onTemplatesModalOpenChange}
+                onSaveStatusChange={onSaveStatusChange}
               />
             </ClientSideSuspense>
           </CanvasErrorBoundary>
