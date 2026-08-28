@@ -265,7 +265,16 @@ function FlowCanvasInner({
         return
       }
 
-      const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
+      // `screenToFlowPosition` maps the cursor (client coords) into flow space,
+      // already accounting for the canvas container's rect plus the current pan
+      // and zoom. A node's `position` is its top-left corner, so shift by half
+      // the node size to land the node's center exactly under the cursor —
+      // matching the drag ghost, which is drawn centered on the cursor.
+      const cursor = screenToFlowPosition({ x: event.clientX, y: event.clientY })
+      const position = {
+        x: cursor.x - payload.width / 2,
+        y: cursor.y - payload.height / 2,
+      }
       shapeCounterRef.current += 1
       const id = `${payload.shape}-${Date.now()}-${shapeCounterRef.current}`
 
