@@ -2,7 +2,7 @@ import { NODE_COLORS, SHAPE_DEFAULT_SIZES, type CanvasNode } from "@/types/canva
 import type { CanvasTemplate } from "@/components/editor/starter-templates"
 
 const VIEWPORT = { width: 280, height: 150 }
-const PADDING = 12
+const PADDING = 8
 
 interface Placed {
   node: CanvasNode
