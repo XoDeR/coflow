@@ -29,7 +29,7 @@ const google = createGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_AI_API_KEY,
 })
 
-const MODEL = "gemini-2.5-flash"
+const MODEL = "gemini-3.5-flash-lite"
 
 const COLOR_NAMES = Object.keys(NODE_COLORS) as NodeColorName[]
 
