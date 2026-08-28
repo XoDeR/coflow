@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Canvas autosave + load (`context/feature-specs/21-canvas-autosave.md`) — complete
+- Trigger.dev setup — complete (dev worker builds and syncs the `example` task; project `coflow` / `proj_rllnoiliytnmwbhcyzuw`)
 
 ## Current Goal
 
-- Persist collaborative canvas state before AI generation lands: canvas JSON stored in Vercel Blob, the blob URL stored on `Project.canvasJsonPath`. `PUT`/`GET /api/projects/[projectId]/canvas` routes, a debounced autosave hook tracking saving/saved/error, a one-time loader that hydrates an empty room from the saved snapshot (skipped when the room already has nodes/edges), and a save-status indicator in the editor navbar.
+- Trigger.dev is wired in. Next: build the real background tasks (AI design generation, spec generation) in `trigger/`.
 
 ## Completed
 
@@ -165,6 +165,8 @@ Update this file whenever the current phase, active feature, or implementation s
 
 - `21-canvas-autosave` (follow-up, `context/current-issues.md` #5 — auto-zoom on first drop): `components/canvas/flow-canvas.tsx` — `<ReactFlow fitView>` (unconditional) deferred its fit until the first node was measured on an empty canvas, snapping the viewport onto that node. Now `fitView={fitViewOnInit}`, captured once at mount as `nodes.length > 0 || edges.length > 0`, so an empty canvas never arms fitView. Snapshot load and template import still call `reactFlow.fitView({ duration: 300 })` explicitly after adding nodes.
 - `21-canvas-autosave` (follow-up, `context/current-issues.md` #4 — drop position offset): `components/canvas/flow-canvas.tsx` `handleDrop` now offsets the dropped node by half its width/height. `screenToFlowPosition` already handled the container rect + pan + zoom; the bug was that a node's `position` is its top-left corner, so the node landed down-and-right of the cursor. Subtracting half the size centers the node under the cursor, matching the drag ghost. The drag image is a 1x1 transparent gif with `setDragImage(img, 0, 0)` and the position comes from live cursor coords, so no grab-offset term is needed.
+
+- `trigger-setup`: Added Trigger.dev v4. `@trigger.dev/sdk` (dep) and `@trigger.dev/build` (devDep) pinned to an exact `4.5.13` — the CLI aborts the dev/deploy build when a `^`-ranged version is present ("Version mismatch detected while running in CI"). `trigger.config.ts` at repo root: `defineConfig` from `@trigger.dev/sdk`, `project: "proj_rllnoiliytnmwbhcyzuw"`, `runtime: "node"`, `maxDuration: 3600`, default retries, `dirs: ["./trigger"]`. `trigger/example.ts` — one exported `exampleTask` (`task()` from `@trigger.dev/sdk`, `id: "example"`, `maxDuration: 300`, logs + `wait.for` + returns). Used `trigger/` (not `src/trigger/`) to match the `trigger` boundary already documented in `architecture-context.md` / `code-standards.md`; there is no `src/` in this repo. `trigger.config.ts` added to `tsconfig.json` `include`; `.trigger` added to `.gitignore`. `TRIGGER_SECRET_KEY` placeholder in `.example.env.local`; real `tr_dev_…` key in `.env.local` (user-supplied). Verified: `npx trigger.dev@4.5.13 dev` builds a local worker (`default -> 20260828.1`) and the build's `index.json` lists the `example` task with the config's retry policy — i.e. it synced to the dashboard. `tsc --noEmit` passes.
 
 ## In Progress
 

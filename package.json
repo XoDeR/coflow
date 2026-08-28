@@ -19,6 +19,7 @@
     "@liveblocks/react-ui": "^3.24.1",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "@trigger.dev/sdk": "4.5.13",
     "@vercel/blob": "^2.8.0",
     "@xyflow/react": "^12.11.3",
     "class-variance-authority": "^0.7.1",
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@trigger.dev/build": "4.5.13",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
