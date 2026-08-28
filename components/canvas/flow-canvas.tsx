@@ -367,6 +367,13 @@ function FlowCanvasInner({
     onRegisterSave(saveNow)
   }, [onRegisterSave, saveNow])
 
+  // Only let React Flow frame content when the canvas already has some at mount.
+  // With `fitView` set unconditionally, an empty canvas has nothing to fit, so
+  // React Flow defers the fit until the first node is measured — dropping the
+  // first node would then snap the viewport onto it. Snapshot / template loads
+  // do their own explicit `fitView` after adding nodes, so they're unaffected.
+  const [fitViewOnInit] = useState(() => nodes.length > 0 || edges.length > 0)
+
   return (
     <EdgeInteractionContext.Provider value={edgeInteraction}>
       <div className="relative h-full w-full" onDragOver={handleDragOver} onDrop={handleDrop}>
@@ -388,7 +395,7 @@ function FlowCanvasInner({
           connectionLineType={ConnectionLineType.SmoothStep}
           connectionMode={ConnectionMode.Loose}
           deleteKeyCode={null}
-          fitView
+          fitView={fitViewOnInit}
         >
           <Background variant={BackgroundVariant.Dots} color="var(--border-default)" />
           <MiniMap bgColor="var(--bg-surface)" className="border! border-surface-border!" />
