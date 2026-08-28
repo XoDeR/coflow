@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useRef, useState } from "react"
 
 import { CanvasRoom } from "@/components/canvas/canvas-room"
 import { AiSidebar } from "@/components/editor/ai-sidebar"
@@ -26,6 +26,15 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false)
   const [saveStatus, setSaveStatus] = useState<CanvasSaveStatus>("idle")
+  // The manual-save function lives inside the Liveblocks room (it needs the live
+  // canvas state); the canvas registers it here so the navbar button can call it.
+  const saveNowRef = useRef<(() => void) | null>(null)
+  const registerSave = useCallback((fn: () => void) => {
+    saveNowRef.current = fn
+  }, [])
+  const handleManualSave = useCallback(() => {
+    saveNowRef.current?.()
+  }, [])
   const activeProject = activeProjectId
     ? projects.find((project) => project.id === activeProjectId)
     : undefined
@@ -61,6 +70,7 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
           activeProjectId ? () => setIsTemplatesModalOpen(true) : undefined
         }
         saveStatus={activeProjectId ? saveStatus : undefined}
+        onSave={activeProjectId ? handleManualSave : undefined}
         showUserButton={!activeProjectId}
       />
       <div className="relative flex flex-1 overflow-hidden">
@@ -86,6 +96,7 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
               templatesModalOpen={isTemplatesModalOpen}
               onTemplatesModalOpenChange={setIsTemplatesModalOpen}
               onSaveStatusChange={setSaveStatus}
+              onRegisterSave={registerSave}
             />
           ) : (
             <EditorHome onCreateProject={openCreateDialog} />

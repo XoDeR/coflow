@@ -24,6 +24,8 @@ interface EditorNavbarProps {
   onOpenTemplates?: () => void
   /** Autosave status for the active canvas; omitted outside a workspace. */
   saveStatus?: CanvasSaveStatus
+  /** Triggers a manual canvas save; omitted outside a workspace. */
+  onSave?: () => void
   /**
    * When false, the navbar omits its Clerk `UserButton` — the editor canvas view
    * renders the current user inside its own top-right presence group instead.
@@ -40,6 +42,7 @@ export function EditorNavbar({
   onShare,
   onOpenTemplates,
   saveStatus,
+  onSave,
   showUserButton = true,
 }: EditorNavbarProps) {
   return (
@@ -66,7 +69,9 @@ export function EditorNavbar({
         ) : null}
       </div>
       <div className="flex flex-1 items-center justify-end gap-1">
-        {saveStatus ? <CanvasSaveButton status={saveStatus} /> : null}
+        {saveStatus && onSave ? (
+          <CanvasSaveButton status={saveStatus} onSave={onSave} />
+        ) : null}
         {onOpenTemplates ? (
           <Button variant="ghost" size="sm" onClick={onOpenTemplates}>
             <LayoutTemplate />

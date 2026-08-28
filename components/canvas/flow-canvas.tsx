@@ -76,6 +76,7 @@ interface FlowCanvasProps {
   templatesModalOpen: boolean
   onTemplatesModalOpenChange: (open: boolean) => void
   onSaveStatusChange: (status: CanvasSaveStatus) => void
+  onRegisterSave: (save: () => void) => void
 }
 
 export function FlowCanvas({
@@ -83,6 +84,7 @@ export function FlowCanvas({
   templatesModalOpen,
   onTemplatesModalOpenChange,
   onSaveStatusChange,
+  onRegisterSave,
 }: FlowCanvasProps) {
   return (
     <ReactFlowProvider>
@@ -91,6 +93,7 @@ export function FlowCanvas({
         templatesModalOpen={templatesModalOpen}
         onTemplatesModalOpenChange={onTemplatesModalOpenChange}
         onSaveStatusChange={onSaveStatusChange}
+        onRegisterSave={onRegisterSave}
       />
     </ReactFlowProvider>
   )
@@ -101,6 +104,7 @@ function FlowCanvasInner({
   templatesModalOpen,
   onTemplatesModalOpenChange,
   onSaveStatusChange,
+  onRegisterSave,
 }: FlowCanvasProps) {
   const { nodes, edges, onNodesChange, onEdgesChange, onDelete } =
     useLiveblocksFlow<CanvasNode, CanvasEdge>({
@@ -299,13 +303,17 @@ function FlowCanvasInner({
     onLoad: applySnapshot,
   })
 
-  useCanvasAutosave({
+  const { saveNow } = useCanvasAutosave({
     projectId,
     nodes,
     edges,
     enabled: isLoaded,
     onStatusChange: onSaveStatusChange,
   })
+
+  useEffect(() => {
+    onRegisterSave(saveNow)
+  }, [onRegisterSave, saveNow])
 
   return (
     <EdgeInteractionContext.Provider value={edgeInteraction}>

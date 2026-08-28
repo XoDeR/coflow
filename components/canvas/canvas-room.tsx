@@ -16,6 +16,7 @@ interface CanvasRoomProps {
   templatesModalOpen: boolean
   onTemplatesModalOpenChange: (open: boolean) => void
   onSaveStatusChange: (status: CanvasSaveStatus) => void
+  onRegisterSave: (save: () => void) => void
 }
 
 export function CanvasRoom({
@@ -23,6 +24,7 @@ export function CanvasRoom({
   templatesModalOpen,
   onTemplatesModalOpenChange,
   onSaveStatusChange,
+  onRegisterSave,
 }: CanvasRoomProps) {
   return (
     <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
@@ -35,6 +37,7 @@ export function CanvasRoom({
                 templatesModalOpen={templatesModalOpen}
                 onTemplatesModalOpenChange={onTemplatesModalOpenChange}
                 onSaveStatusChange={onSaveStatusChange}
+                onRegisterSave={onRegisterSave}
               />
             </ClientSideSuspense>
           </CanvasErrorBoundary>

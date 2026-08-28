@@ -1,41 +1,41 @@
 "use client"
 
-import { AlertTriangle, Check, Cloud, Loader2 } from "lucide-react"
+import { AlertTriangle, Check, Loader2, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type { CanvasSaveStatus } from "@/hooks/use-canvas-autosave"
 
 interface CanvasSaveButtonProps {
   status: CanvasSaveStatus
+  onSave: () => void
 }
 
 const LABELS: Record<CanvasSaveStatus, string> = {
   idle: "Save",
-  saving: "Saving…",
+  saving: "Saving...",
   saved: "Saved",
-  error: "Save failed",
+  error: "Error",
 }
 
 /**
- * Save-status indicator shown in the editor navbar. Display-only — autosave
- * drives the actual persistence; this just surfaces its current state.
+ * Save control for the workspace navbar. Clicking triggers a manual save through
+ * the same path autosave uses; the label reflects the autosave status and
+ * settles back to "Save" shortly after a save resolves.
  */
-export function CanvasSaveButton({ status }: CanvasSaveButtonProps) {
+export function CanvasSaveButton({ status, onSave }: CanvasSaveButtonProps) {
   return (
     <Button
       variant="ghost"
       size="sm"
-      disabled
+      onClick={onSave}
+      disabled={status === "saving"}
       aria-live="polite"
-      className="disabled:opacity-100"
     >
       {status === "saving" ? <Loader2 className="animate-spin text-copy-muted" /> : null}
       {status === "saved" ? <Check className="text-success" /> : null}
       {status === "error" ? <AlertTriangle className="text-error" /> : null}
-      {status === "idle" ? <Cloud className="text-copy-muted" /> : null}
-      <span
-        className={status === "error" ? "text-error" : "text-copy-secondary"}
-      >
+      {status === "idle" ? <Save className="text-copy-muted" /> : null}
+      <span className={status === "error" ? "text-error" : "text-copy-secondary"}>
         {LABELS[status]}
       </span>
     </Button>
