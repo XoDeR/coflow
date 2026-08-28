@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Trigger.dev setup — complete (dev worker builds and syncs the `example` task; project `coflow` / `proj_rllnoiliytnmwbhcyzuw`)
+- Design-agent backend wiring — complete (`22-design-agent-api`: trigger route, `TaskRun` model, run-scoped token route, minimal `design-agent` task). No AI logic yet.
 
 ## Current Goal
 
-- Trigger.dev is wired in. Next: build the real background tasks (AI design generation, spec generation) in `trigger/`.
+- Backend task wiring for design generation is in place. Next: add real AI logic to the `design-agent` task (node/edge generation, canvas writes) and a spec-generation task.
 
 ## Completed
 
@@ -166,6 +166,12 @@ Update this file whenever the current phase, active feature, or implementation s
 - `21-canvas-autosave` (follow-up, `context/current-issues.md` #5 — auto-zoom on first drop): `components/canvas/flow-canvas.tsx` — `<ReactFlow fitView>` (unconditional) deferred its fit until the first node was measured on an empty canvas, snapping the viewport onto that node. Now `fitView={fitViewOnInit}`, captured once at mount as `nodes.length > 0 || edges.length > 0`, so an empty canvas never arms fitView. Snapshot load and template import still call `reactFlow.fitView({ duration: 300 })` explicitly after adding nodes.
 - `21-canvas-autosave` (follow-up, `context/current-issues.md` #4 — drop position offset): `components/canvas/flow-canvas.tsx` `handleDrop` now offsets the dropped node by half its width/height. `screenToFlowPosition` already handled the container rect + pan + zoom; the bug was that a node's `position` is its top-left corner, so the node landed down-and-right of the cursor. Subtracting half the size centers the node under the cursor, matching the drag ghost. The drag image is a 1x1 transparent gif with `setDragImage(img, 0, 0)` and the position comes from live cursor coords, so no grab-offset term is needed.
 
+- `22-design-agent-api`: `prisma/models/task-run.prisma` (new) — `TaskRun` model (`id` cuid PK, `runId @unique`, `projectId`, `userId`, `createdAt`, plus the spec's explicit `@@index([runId])` — redundant with the `@unique` index but kept because the spec lists it separately — and `@@index([userId, projectId])`). Migration `20260828173247_add_task_run_model` applied against the hosted Postgres, `prisma generate` re-run.
+- `22-design-agent-api`: `trigger/design-agent.ts` (new) — `designAgentTask` (`task()` from `@trigger.dev/sdk`, `id: "design-agent"`, `maxDuration: 300`), typed `DesignAgentPayload { prompt, roomId }`. Reuses the exact pattern of the existing `trigger/example.ts` (plain `task()`, `logger.log`, return value) rather than introducing `schemaTask` or any AI SDK. It logs the input and echoes `{ received: payload }` — no AI providers, no node/edge generation, no canvas writes, per the spec's scope limits.
+- `22-design-agent-api`: `lib/task-runs.ts` (new) — `recordTaskRun(runId, projectId, userId)` creates the row; `getOwnedTaskRun(runId, userId)` returns the `TaskRun` only when `userId` matches, else `null` (callers treat `null` as "not authorized"). Keeps the routes thin per `code-standards.md`.
+- `22-design-agent-api`: `app/api/ai/design/route.ts` (new) — `POST`. `getCurrentIdentity()` → `401` if signed out; validates `prompt` (non-empty string, trimmed), `roomId`, `projectId` (`400` otherwise); `getProjectAccess(projectId, userId, email)` → `404` if missing, `403` if not owner/collaborator (same gate as the canvas/collaborators routes). Then `tasks.trigger<typeof designAgentTask>("design-agent", { prompt, roomId })` (type-only import of the task, per the skill's backend-triggering rule), `recordTaskRun(handle.id, projectId, userId)`, returns `{ runId }` with `202`.
+- `22-design-agent-api`: `app/api/ai/design/token/route.ts` (new) — `POST`. `getCurrentIdentity()` → `401`; validates `runId` (`400`); `getOwnedTaskRun(runId, userId)` → `403` if the run isn't the caller's; `auth.createPublicToken({ scopes: { read: { runs: [runId] } } })` (trigger's `auth`, not Clerk's — no import collision since Clerk auth comes via `getCurrentIdentity`), returns `{ token }` (default 15-min expiry).
+- `22-design-agent-api`: Verified `tsc --noEmit`, `eslint` on all new files, and `npm run build` all pass (build output lists `/api/ai/design` and `/api/ai/design/token` as dynamic routes). The `design-agent` task's dashboard sync wasn't verified via `trigger.dev dev` — the CLI aborts under the Bash tool's CI env (`Version mismatch detected while running in CI`), same limitation noted in `trigger-setup`; the task follows the already-synced `example` task's pattern exactly.
 - `trigger-setup`: Added Trigger.dev v4. `@trigger.dev/sdk` (dep) and `@trigger.dev/build` (devDep) pinned to an exact `4.5.13` — the CLI aborts the dev/deploy build when a `^`-ranged version is present ("Version mismatch detected while running in CI"). `trigger.config.ts` at repo root: `defineConfig` from `@trigger.dev/sdk`, `project: "proj_rllnoiliytnmwbhcyzuw"`, `runtime: "node"`, `maxDuration: 3600`, default retries, `dirs: ["./trigger"]`. `trigger/example.ts` — one exported `exampleTask` (`task()` from `@trigger.dev/sdk`, `id: "example"`, `maxDuration: 300`, logs + `wait.for` + returns). Used `trigger/` (not `src/trigger/`) to match the `trigger` boundary already documented in `architecture-context.md` / `code-standards.md`; there is no `src/` in this repo. `trigger.config.ts` added to `tsconfig.json` `include`; `.trigger` added to `.gitignore`. `TRIGGER_SECRET_KEY` placeholder in `.example.env.local`; real `tr_dev_…` key in `.env.local` (user-supplied). Verified: `npx trigger.dev@4.5.13 dev` builds a local worker (`default -> 20260828.1`) and the build's `index.json` lists the `example` task with the config's retry policy — i.e. it synced to the dashboard. `tsc --noEmit` passes.
 
 ## In Progress
@@ -174,7 +180,9 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Next Up
 
-- Wire real AI chat behavior into `components/editor/ai-architect-tab.tsx` (assistant responses, model call, streaming) and real spec generation into the Specs tab.
+- Add real AI logic to `trigger/design-agent.ts` (call an AI provider, generate nodes/edges, write them into the Liveblocks room).
+- Wire real AI chat behavior into `components/editor/ai-architect-tab.tsx` (assistant responses, model call, streaming) — likely triggering `POST /api/ai/design` and subscribing to the run with the token from `POST /api/ai/design/token`.
+- Real spec generation into the Specs tab.
 
 ## Open Questions
 
