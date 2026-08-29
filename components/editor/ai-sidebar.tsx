@@ -27,6 +27,8 @@ import type { AiStatusState } from "@/types/tasks"
 interface AiSidebarProps {
   isOpen: boolean
   onClose: () => void
+  /** Liveblocks room / project id for the active workspace. */
+  roomId: string
 }
 
 const TAB_TRIGGER_CLASS =
@@ -41,8 +43,8 @@ const STATUS_FALLBACK_TEXT: Record<AiStatusState, string> = {
   error: "AI run failed",
 }
 
-export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
-  const { message, isGenerating } = useAiStatus()
+export function AiSidebar({ isOpen, onClose, roomId }: AiSidebarProps) {
+  const { message } = useAiStatus()
 
   const done = message?.state === "complete" || message?.state === "error"
   const [now, setNow] = useState(() => Date.now())
@@ -117,7 +119,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
           value="architect"
           className="flex flex-1 flex-col overflow-hidden"
         >
-          <AiArchitectTab isGenerating={isGenerating} />
+          <AiArchitectTab roomId={roomId} />
         </TabsContent>
 
         <TabsContent

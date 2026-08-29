@@ -14,6 +14,8 @@ import { Bot, Loader2, SendHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { useAiChat } from "@/hooks/use-ai-chat"
+import { useAiStatus } from "@/hooks/use-ai-status"
+import { useDesignRun } from "@/hooks/use-design-run"
 import { cn } from "@/lib/utils"
 
 const STARTER_PROMPTS = [
@@ -22,9 +24,11 @@ const STARTER_PROMPTS = [
   "Build a CI/CD pipeline",
 ]
 
+const AI_SENDER = "Coflow AI"
+
 interface AiArchitectTabProps {
-  /** An AI run is in progress in this room — lock the composer. */
-  isGenerating?: boolean
+  /** Liveblocks room / project id — the target of the design run. */
+  roomId: string
 }
 
 function formatTime(timestamp: number): string {
@@ -34,13 +38,43 @@ function formatTime(timestamp: number): string {
   })
 }
 
-export function AiArchitectTab({ isGenerating = false }: AiArchitectTabProps) {
+export function AiArchitectTab({ roomId }: AiArchitectTabProps) {
   const { messages, sendMessage } = useAiChat()
   const senderName = useSelf((me) => me.info.name) ?? "Anonymous"
+  const { message: statusMessage, isGenerating } = useAiStatus()
 
   const [input, setInput] = useState("")
   const [sendFailed, setSendFailed] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const pushMessage = useCallback(
+    (role: "user" | "assistant", sender: string, content: string) => {
+      sendMessage({
+        id: crypto.randomUUID(),
+        sender,
+        role,
+        content,
+        timestamp: Date.now(),
+      })
+    },
+    [sendMessage]
+  )
+
+  const { isRunning, start } = useDesignRun({
+    onComplete: (outcome) => {
+      pushMessage(
+        "assistant",
+        AI_SENDER,
+        outcome === "success"
+          ? "I've updated the canvas with your design."
+          : "The design run didn't finish. Please try again."
+      )
+    },
+  })
+
+  // A run is active for this participant when they started one, or when anyone
+  // in the room has generation in progress (surfaced through `ai-status-feed`).
+  const runActive = isRunning || isGenerating
 
   useEffect(() => {
     const node = scrollRef.current
@@ -49,25 +83,30 @@ export function AiArchitectTab({ isGenerating = false }: AiArchitectTabProps) {
 
   const send = useCallback(
     (content: string) => {
-      if (isGenerating) return
+      if (runActive) return
       const trimmed = content.trim()
       if (!trimmed) return
 
       try {
-        sendMessage({
-          id: crypto.randomUUID(),
-          sender: senderName,
-          role: "user",
-          content: trimmed,
-          timestamp: Date.now(),
-        })
-        setInput("")
-        setSendFailed(false)
+        pushMessage("user", senderName, trimmed)
       } catch {
         setSendFailed(true)
+        return
       }
+      setInput("")
+      setSendFailed(false)
+
+      void start(trimmed, roomId).then((result) => {
+        if (!result.ok) {
+          pushMessage(
+            "assistant",
+            AI_SENDER,
+            result.error ?? "Something went wrong. Please try again."
+          )
+        }
+      })
     },
-    [isGenerating, senderName, sendMessage]
+    [runActive, senderName, roomId, pushMessage, start]
   )
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -86,8 +125,7 @@ export function AiArchitectTab({ isGenerating = false }: AiArchitectTabProps) {
               <Bot className="h-5 w-5 text-ai-text" />
             </div>
             <p className="max-w-60 text-sm text-copy-muted">
-              Start the conversation — messages are shared with everyone in this
-              room.
+              Describe a system and Coflow AI will map it onto the shared canvas.
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               {STARTER_PROMPTS.map((prompt) => (
@@ -95,7 +133,7 @@ export function AiArchitectTab({ isGenerating = false }: AiArchitectTabProps) {
                   key={prompt}
                   type="button"
                   onClick={() => send(prompt)}
-                  disabled={isGenerating}
+                  disabled={runActive}
                   className="rounded-full bg-subtle px-3 py-1.5 text-xs text-ai-text transition-colors hover:bg-subtle-border/40 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {prompt}
@@ -126,8 +164,8 @@ export function AiArchitectTab({ isGenerating = false }: AiArchitectTabProps) {
                     className={cn(
                       "rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap",
                       isOwn
-                        ? "border-2 border-brand/50 bg-accent-dim text-copy-primary"
-                        : "border border-surface-border bg-elevated text-ai-text"
+                        ? "bg-success text-background"
+                        : "border border-surface-border bg-elevated text-copy-primary"
                     )}
                   >
                     {message.content}
@@ -138,6 +176,18 @@ export function AiArchitectTab({ isGenerating = false }: AiArchitectTabProps) {
           </div>
         )}
       </div>
+
+      {runActive ? (
+        <div
+          aria-live="polite"
+          className="flex items-center gap-2 border-t border-surface-border bg-elevated px-4 py-2 text-xs text-success"
+        >
+          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+          <span className="truncate">
+            {statusMessage?.text?.trim() || "Coflow AI is working…"}
+          </span>
+        </div>
+      ) : null}
 
       <div className="border-t border-surface-border p-3">
         {sendFailed ? (
@@ -150,20 +200,20 @@ export function AiArchitectTab({ isGenerating = false }: AiArchitectTabProps) {
             value={input}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={isGenerating}
+            disabled={runActive}
             placeholder={
-              isGenerating ? "Coflow AI is working…" : "Message the room…"
+              runActive ? "Coflow AI is working…" : "Describe a system to design…"
             }
             className="max-h-40 min-h-18 flex-1 resize-none disabled:cursor-not-allowed disabled:opacity-60"
           />
           <Button
             size="icon"
             onClick={() => send(input)}
-            disabled={isGenerating || !input.trim()}
-            aria-label={isGenerating ? "AI is generating" : "Send message"}
-            className="bg-ai text-white hover:bg-ai/90"
+            disabled={runActive || !input.trim()}
+            aria-label={runActive ? "AI is generating" : "Send message"}
+            className="bg-success text-background hover:bg-success/90 disabled:opacity-50"
           >
-            {isGenerating ? (
+            {runActive ? (
               <Loader2 className="animate-spin" />
             ) : (
               <SendHorizontal />
@@ -171,7 +221,7 @@ export function AiArchitectTab({ isGenerating = false }: AiArchitectTabProps) {
           </Button>
         </div>
         <p className="mt-1.5 text-[0.7rem] text-copy-faint">
-          {isGenerating
+          {runActive
             ? "The composer unlocks when generation finishes"
             : "Enter to send, Shift+Enter for a new line"}
         </p>

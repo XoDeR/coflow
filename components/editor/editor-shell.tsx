@@ -98,6 +98,7 @@ export function EditorShell({ projects, activeProjectId }: EditorShellProps) {
             <AiSidebar
               isOpen={isAiSidebarOpen}
               onClose={() => setIsAiSidebarOpen(false)}
+              roomId={activeProjectId}
             />
           </EditorRoom>
         ) : (
