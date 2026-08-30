@@ -1,18 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import {
-  AlertTriangle,
-  Bot,
-  Check,
-  Download,
-  FileText,
-  Loader2,
-  Sparkles,
-  X,
-} from "lucide-react"
+import { AlertTriangle, Bot, Check, Loader2, X } from "lucide-react"
 
 import { AiArchitectTab } from "@/components/editor/ai-architect-tab"
+import { AiSpecsTab } from "@/components/editor/ai-specs-tab"
 import { useAiStatus } from "@/hooks/use-ai-status"
 import { Button } from "@/components/ui/button"
 import {
@@ -124,39 +116,9 @@ export function AiSidebar({ isOpen, onClose, roomId }: AiSidebarProps) {
 
         <TabsContent
           value="specs"
-          className="flex-1 overflow-y-auto p-4"
+          className="flex flex-1 flex-col overflow-hidden"
         >
-          <Button className="w-full bg-ai text-white hover:bg-ai/90">
-            <Sparkles />
-            Generate Spec
-          </Button>
-
-          <div className="mt-4 rounded-2xl border border-surface-border bg-elevated p-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-subtle">
-                <FileText className="h-4 w-4 text-ai-text" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-sm font-medium text-copy-primary">
-                  E-commerce Backend Spec
-                </h3>
-                <p className="mt-1 line-clamp-3 text-xs text-copy-muted">
-                  A technical specification covering service boundaries, data
-                  models, queue topology, and API contracts for a scalable
-                  e-commerce backend.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled
-                  className="mt-3"
-                >
-                  <Download />
-                  Download
-                </Button>
-              </div>
-            </div>
-          </div>
+          <AiSpecsTab roomId={roomId} />
         </TabsContent>
       </Tabs>
     </aside>

@@ -1,5 +1,6 @@
 import { logger, metadata, schemaTask } from "@trigger.dev/sdk"
 
+import { saveGeneratedSpec } from "@/lib/project-specs"
 import {
   generateSpecMarkdown,
   generateSpecPayloadSchema,
@@ -36,8 +37,12 @@ export const generateSpecTask = schemaTask({
         edges: payload.edges,
       })
 
-      metadata.set("status", "complete")
       logger.log("Spec generated", { length: spec.length })
+
+      // Persist: metadata row in Postgres, Markdown content in Vercel Blob.
+      const record = await saveGeneratedSpec(payload.projectId, spec)
+      metadata.set("status", "complete").set("specId", record.id)
+      logger.log("Spec persisted", { specId: record.id, filePath: record.filePath })
 
       // Plain Markdown as the task output, per spec.
       return spec
