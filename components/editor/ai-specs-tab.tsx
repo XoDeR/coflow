@@ -5,7 +5,6 @@ import { AlertTriangle, Download, FileText, Loader2, Sparkles } from "lucide-rea
 
 import { SpecPreviewDialog } from "@/components/editor/spec-preview-dialog"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAiChat } from "@/hooks/use-ai-chat"
 import { useAiStatus } from "@/hooks/use-ai-status"
 import { useCanvasGraph } from "@/hooks/use-canvas-graph"
@@ -104,7 +103,7 @@ export function AiSpecsTab({ roomId }: AiSpecsTabProps) {
         </div>
       ) : null}
 
-      <ScrollArea className="flex-1">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="p-4">
           {isLoading ? (
             <div className="flex items-center gap-2 py-6 text-sm text-copy-muted">
@@ -169,7 +168,7 @@ export function AiSpecsTab({ roomId }: AiSpecsTabProps) {
             </ul>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       <SpecPreviewDialog
         projectId={roomId}

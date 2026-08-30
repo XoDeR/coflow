@@ -13,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { downloadUrl } from "@/lib/download"
 import type { ProjectSpecSummary } from "@/types/spec"
 
@@ -79,15 +78,17 @@ export function SpecPreviewDialog({
 
   return (
     <Dialog open={spec !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[80vh] flex-col gap-4 rounded-3xl sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{spec?.filename ?? "Spec"}</DialogTitle>
+      <DialogContent className="flex max-h-[80vh] flex-col gap-0 overflow-hidden rounded-3xl p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 border-b border-surface-border p-4">
+          <DialogTitle className="truncate pr-8">
+            {spec?.filename ?? "Spec"}
+          </DialogTitle>
           <DialogDescription>
             {spec ? `Generated ${formatDate(spec.createdAt)}` : null}
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="-mx-1 max-h-[52vh] flex-1 px-1">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {isLoading ? (
             <div className="flex items-center gap-2 py-8 text-sm text-copy-muted">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -101,9 +102,9 @@ export function SpecPreviewDialog({
           ) : content !== null ? (
             <MarkdownContent content={content} />
           ) : null}
-        </ScrollArea>
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="mx-0 mb-0 shrink-0 border-t border-surface-border bg-surface p-4">
           <Button
             type="button"
             variant="outline"
