@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { Pencil, Plus, Trash2, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -89,20 +90,25 @@ export function ProjectSidebar({
                   <li
                     key={project.id}
                     className={cn(
-                      "group flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-subtle",
+                      "group flex items-center justify-between rounded-lg pr-2 hover:bg-subtle",
                       project.id === activeProjectId && "bg-subtle"
                     )}
                   >
-                    <span
+                    <Link
+                      href={`/editor/${project.id}`}
+                      onClick={onClose}
+                      aria-current={
+                        project.id === activeProjectId ? "page" : undefined
+                      }
                       className={cn(
-                        "truncate text-sm",
+                        "min-w-0 flex-1 truncate px-2 py-1.5 text-sm",
                         project.id === activeProjectId
                           ? "text-brand"
                           : "text-copy-primary"
                       )}
                     >
                       {project.name}
-                    </span>
+                    </Link>
                     <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                       <Button
                         variant="ghost"
@@ -142,20 +148,25 @@ export function ProjectSidebar({
                   <li
                     key={project.id}
                     className={cn(
-                      "flex items-center rounded-lg px-2 py-1.5 hover:bg-subtle",
+                      "flex items-center rounded-lg hover:bg-subtle",
                       project.id === activeProjectId && "bg-subtle"
                     )}
                   >
-                    <span
+                    <Link
+                      href={`/editor/${project.id}`}
+                      onClick={onClose}
+                      aria-current={
+                        project.id === activeProjectId ? "page" : undefined
+                      }
                       className={cn(
-                        "truncate text-sm",
+                        "min-w-0 flex-1 truncate px-2 py-1.5 text-sm",
                         project.id === activeProjectId
                           ? "text-brand"
                           : "text-copy-primary"
                       )}
                     >
                       {project.name}
-                    </span>
+                    </Link>
                   </li>
                 ))}
               </ul>
